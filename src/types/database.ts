@@ -87,6 +87,38 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["media"]["Insert"]>;
         Relationships: [];
       };
+      messages: {
+        Row: {
+          id: string;
+          event_id: string;
+          guest_id: string | null;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          guest_id?: string | null;
+          body: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "messages_guest_id_fkey";
+            columns: ["guest_id"];
+            isOneToOne: false;
+            referencedRelation: "guests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "messages_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       admin_event_access: {
         Row: {
           event_id: string;

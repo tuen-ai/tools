@@ -104,14 +104,21 @@ interface UploadOptions {
   eventSlug: string;
   clientFingerprint: string;
   displayName: string | null;
+  message: string | null;
   items: UploadItem[];
   onItemChange: (id: string, patch: Partial<UploadItem>) => void;
   concurrency?: number;
 }
 
 export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
-  const { eventSlug, clientFingerprint, displayName, items, onItemChange } =
-    opts;
+  const {
+    eventSlug,
+    clientFingerprint,
+    displayName,
+    message,
+    items,
+    onItemChange,
+  } = opts;
   const concurrency = opts.concurrency ?? 3;
 
   // 1) Mint signed URLs — retry on transient failures, but NOT on 429
@@ -125,6 +132,7 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
           eventSlug,
           clientFingerprint,
           displayName: displayName?.trim() || null,
+          message: message?.trim() || null,
           files: items.map((it) => ({
             mime: it.file.type as AllowedMime,
             size: it.file.size,

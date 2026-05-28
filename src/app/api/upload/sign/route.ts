@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { upsertGuest, countGuestMedia } from "@/lib/db/guests";
 import { getEventBySlug } from "@/lib/db/events";
+import { insertMessage } from "@/lib/db/messages";
 import { takeToken, getClientIp } from "@/lib/rate-limit";
 import {
   ALLOWED_MIME_TYPES,
@@ -27,6 +28,7 @@ const BodySchema = z.object({
   eventSlug: z.string().min(1).max(64),
   clientFingerprint: z.string().uuid(),
   displayName: z.string().trim().min(1).max(64).optional().nullable(),
+  message: z.string().trim().min(1).max(500).optional().nullable(),
   files: z.array(FileSchema).min(1).max(MAX_FILES_PER_REQUEST),
 });
 
@@ -75,6 +77,21 @@ export async function POST(request: Request) {
     clientFingerprint: parsed.clientFingerprint,
     displayName: parsed.displayName ?? null,
   });
+
+  // Optional message — insert before quota check so even if the guest is
+  // at their photo limit the couple still receives their note.
+  if (parsed.message) {
+    try {
+      await insertMessage(admin, {
+        eventId: event.id,
+        guestId: guest.id,
+        body: parsed.message,
+      });
+    } catch (err) {
+      // Don't block uploads on a message-insert failure.
+      console.error("Failed to insert guest message", err);
+    }
+  }
 
   const existingCount = await countGuestMedia(admin, guest.id);
   if (existingCount + parsed.files.length > event.max_uploads_per_guest) {

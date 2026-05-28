@@ -4,9 +4,12 @@ import { requireEventAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { listMediaPage, signThumbnailUrls } from "@/lib/db/media";
+import { listMessagesPage } from "@/lib/db/messages";
 import { MediaGrid } from "./media-grid";
+import { MessagesPanel } from "./messages-panel";
 
 const PAGE_SIZE = 60;
+const MESSAGE_LIMIT = 50;
 
 interface Props {
   params: Promise<{ eventId: string }>;
@@ -17,9 +20,10 @@ export default async function EventDashboardPage({ params }: Props) {
   await requireEventAdmin(eventId);
 
   const admin = createAdminClient();
-  const [event, page] = await Promise.all([
+  const [event, page, messages] = await Promise.all([
     getEventById(admin, eventId),
     listMediaPage(admin, { eventId, offset: 0, limit: PAGE_SIZE }),
+    listMessagesPage(admin, { eventId, offset: 0, limit: MESSAGE_LIMIT }),
   ]);
 
   if (!event) {
@@ -57,6 +61,8 @@ export default async function EventDashboardPage({ params }: Props) {
           </Link>
         </nav>
       </header>
+
+      <MessagesPanel eventId={eventId} initialRows={messages.rows} />
 
       <MediaGrid
         eventId={eventId}

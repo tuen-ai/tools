@@ -52,6 +52,7 @@ export function UploadClient({
     : undefined;
   const [fingerprint, setFingerprint] = useState("");
   const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -121,9 +122,13 @@ export function UploadClient({
         eventSlug,
         clientFingerprint: fingerprint,
         displayName: name || null,
+        message: message || null,
         items,
         onItemChange: patchItem,
       });
+      // Clear the message after a successful send so a second batch
+      // doesn't accidentally re-post it.
+      setMessage("");
     } catch (err) {
       setBatchError((err as Error).message);
     } finally {
@@ -164,6 +169,22 @@ export function UploadClient({
           maxLength={64}
           disabled={isUploading}
           className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-sm text-ink-700 font-medium">
+          {t.messageLabel}{" "}
+          <span className="text-ink-500 font-normal">{t.optional}</span>
+        </span>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder={t.messagePlaceholder}
+          maxLength={500}
+          rows={2}
+          disabled={isUploading}
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
         />
       </label>
 
