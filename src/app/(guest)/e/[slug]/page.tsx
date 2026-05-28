@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,6 +11,34 @@ interface Props {
 }
 
 export const revalidate = 60;
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const event = await getEventBySlug(createAdminClient(), slug);
+  if (!event) return { title: "Event not found" };
+
+  const title = `${event.couple_names} — Share your photos`;
+  const description =
+    event.welcome_message ??
+    `Send your photos straight to ${event.couple_names}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: "Wedding photo sharing",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+    robots: { index: false, follow: false }, // event pages are private
+  };
+}
 
 export default async function GuestEventPage({ params }: Props) {
   const { slug } = await params;

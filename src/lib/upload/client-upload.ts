@@ -22,6 +22,44 @@ interface SignResponse {
   }>;
 }
 
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_MS = 1000;
+
+class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function isRetryableStatus(status: number): boolean {
+  // 408 timeout, 429 rate-limit (with backoff this is fine), 5xx server,
+  // 404 because Supabase Storage is eventually consistent — the HEAD in
+  // finalize occasionally races a just-uploaded PUT.
+  if (status === 404 || status === 408 || status === 429) return true;
+  if (status >= 500 && status < 600) return true;
+  return false;
+}
+
+async function withRetry<T>(
+  fn: (attempt: number) => Promise<T>,
+  isRetryable: (err: unknown) => boolean,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+    try {
+      return await fn(i);
+    } catch (err) {
+      lastErr = err;
+      if (i === MAX_ATTEMPTS || !isRetryable(err)) break;
+      const delay = RETRY_BASE_MS * Math.pow(2, i - 1);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 /** Uploads a single file to a signed Supabase Storage URL with progress. */
 function putWithProgress(
   signedUrl: string,
@@ -40,9 +78,10 @@ function putWithProgress(
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`Upload failed: HTTP ${xhr.status}`));
+      else reject(new HttpError(xhr.status, `HTTP ${xhr.status}`));
     };
     xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.ontimeout = () => reject(new Error("Network timeout"));
     xhr.send(file);
   });
 }
@@ -57,7 +96,7 @@ async function readImageDimensions(
     bmp.close?.();
     return dims;
   } catch {
-    return null; // HEIC etc. may not decode in some browsers — that's fine.
+    return null;
   }
 }
 
@@ -70,41 +109,46 @@ interface UploadOptions {
   concurrency?: number;
 }
 
-/**
- * Drives the full guest upload flow: mint signed URLs, PUT in parallel
- * with progress, then finalize each row.
- */
 export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
   const { eventSlug, clientFingerprint, displayName, items, onItemChange } =
     opts;
   const concurrency = opts.concurrency ?? 3;
 
-  // 1) Mint signed URLs (one round-trip for the whole batch).
-  const signRes = await fetch("/api/upload/sign", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      eventSlug,
-      clientFingerprint,
-      displayName: displayName?.trim() || null,
-      files: items.map((it) => ({
-        mime: it.file.type as AllowedMime,
-        size: it.file.size,
-      })),
-    }),
-  });
+  // 1) Mint signed URLs — retry on transient failures, but NOT on 429
+  //    (sign is the place we apply IP rate-limiting; retrying compounds it).
+  const sign = await withRetry(
+    async () => {
+      const res = await fetch("/api/upload/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventSlug,
+          clientFingerprint,
+          displayName: displayName?.trim() || null,
+          files: items.map((it) => ({
+            mime: it.file.type as AllowedMime,
+            size: it.file.size,
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new HttpError(res.status, body.error ?? `sign_failed_${res.status}`);
+      }
+      return (await res.json()) as SignResponse;
+    },
+    (err) => {
+      if (err instanceof HttpError) {
+        if (err.status === 429) return false; // rate-limited; abort
+        return isRetryableStatus(err.status);
+      }
+      return true; // network/timeout
+    },
+  );
 
-  if (!signRes.ok) {
-    const body = await signRes.json().catch(() => ({}));
-    throw new Error(body.error ?? `sign_failed_${signRes.status}`);
-  }
-  const sign = (await signRes.json()) as SignResponse;
-
-  // 2) Pair each UI item with its server-issued slot (by order — the API
-  //    returns items in the same order they were sent).
+  // 2) Per-file upload with retry, then finalize with retry.
   const paired = items.map((item, i) => ({ item, slot: sign.items[i] }));
 
-  // 3) Bounded-concurrency runner.
   const queue = paired.slice();
   async function worker() {
     while (queue.length) {
@@ -115,29 +159,49 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
       onItemChange(item.id, { status: "uploading", progress: 0 });
 
       try {
-        await putWithProgress(slot.signedUrl, item.file, (pct) =>
-          onItemChange(item.id, { progress: pct }),
+        // PUT to signed URL — retry network/5xx; do NOT retry 4xx (bad
+        // signature, wrong content-type, etc.).
+        await withRetry(
+          async (attempt) => {
+            if (attempt > 1) onItemChange(item.id, { progress: 0 });
+            await putWithProgress(slot.signedUrl, item.file, (pct) =>
+              onItemChange(item.id, { progress: pct }),
+            );
+          },
+          (err) =>
+            err instanceof HttpError ? isRetryableStatus(err.status) : true,
         );
 
         const dims = await readImageDimensions(item.file);
 
-        const finalizeRes = await fetch("/api/media/finalize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mediaId: slot.mediaId,
-            eventId: sign.eventId,
-            guestId: sign.guestId,
-            storagePath: slot.storagePath,
-            mime: item.file.type,
-            size: item.file.size,
-            ...(dims ?? {}),
-          }),
-        });
-        if (!finalizeRes.ok) {
-          const body = await finalizeRes.json().catch(() => ({}));
-          throw new Error(body.error ?? `finalize_failed_${finalizeRes.status}`);
-        }
+        // Finalize with retry — 404 is retryable (storage eventual
+        // consistency), 400 is not (size or path mismatch will recur).
+        await withRetry(
+          async () => {
+            const res = await fetch("/api/media/finalize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                mediaId: slot.mediaId,
+                eventId: sign.eventId,
+                guestId: sign.guestId,
+                storagePath: slot.storagePath,
+                mime: item.file.type,
+                size: item.file.size,
+                ...(dims ?? {}),
+              }),
+            });
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new HttpError(
+                res.status,
+                body.error ?? `finalize_failed_${res.status}`,
+              );
+            }
+          },
+          (err) =>
+            err instanceof HttpError ? isRetryableStatus(err.status) : true,
+        );
 
         onItemChange(item.id, {
           status: "done",

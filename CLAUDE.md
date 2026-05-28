@@ -16,8 +16,8 @@ couple sees them in a private admin gallery.
 - [x] Phase 2: guest upload flow
 - [x] Phase 3: admin dashboard
 - [x] Phase 4: realtime gallery (admin-only)
-- [x] Phase 5 (partial): signup gate, rate limit, storage cleanup, server-only guards
-- [ ] Phase 5 (rest): email confirmation, retry-on-upload, scheduled hard-delete cron, OG meta
+- [x] Phase 5: signup gate, rate limit, storage cleanup, server-only
+      guards, upload retry, OG meta, scheduled hard-delete cron
 
 ## Running locally
 
@@ -214,6 +214,52 @@ when running multi-region or expecting abuse.
 There is no grace period — clicking the button is the admin's explicit
 intent. The action is in
 `src/app/(admin)/admin/[eventId]/settings/cleanup-action.ts`.
+
+### Scheduled hard-delete cron
+
+`migration 0004_deleted_at.sql` adds a `deleted_at` column to `media`
+and a trigger that sets it when status flips to `'deleted'` (and clears
+it on un-delete).
+
+`/api/cron/cleanup` purges media whose `deleted_at < now() - 7 days`
+along with their storage objects. The endpoint is **disabled unless
+`CRON_SECRET` is set**; once set, requests must carry
+`Authorization: Bearer <CRON_SECRET>`. Vercel cron injects this header
+automatically when the schedule is declared in `vercel.json` (already
+checked in: `0 3 * * *`).
+
+The manual cleanup button still ignores the grace window — admins can
+hard-delete things immediately if they want.
+
+### Upload retry
+
+`src/lib/upload/client-upload.ts` wraps every network step in a small
+retry helper:
+
+- **sign**: retry on 5xx / network / 404 / 408. Do NOT retry 429 —
+  retrying makes the rate-limit worse.
+- **PUT to signed URL**: retry on 5xx / network / 408 / 429.
+- **finalize**: retry on 5xx / 404 (storage eventual consistency) /
+  network. Do NOT retry on 4xx (validation will fail again).
+
+Max 3 attempts each, exponential backoff (1s → 2s → 4s). Progress bar
+visibly resets to 0 between attempts so the guest sees activity.
+
+### Email confirmation
+
+Supabase has email confirmation toggled in **Auth → Sign In / Up** in the
+dashboard. When enabled, `signUp()` returns a user with no session;
+`signUpAction()` already detects this and surfaces "Check your email to
+confirm…" to the form. Wire SMTP under **Auth → SMTP Settings** in
+production — otherwise confirmations queue indefinitely.
+
+### Open Graph
+
+`/e/[slug]` has dynamic OG metadata (`generateMetadata` in
+`page.tsx`) so a guest copy-pasting the QR URL into LINE / WhatsApp /
+iMessage gets a preview card with the couple's names and welcome
+message. Marked `robots: { index: false }` because event pages are
+private.
 
 ## Things deliberately deferred
 

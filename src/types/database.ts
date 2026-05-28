@@ -69,6 +69,7 @@ export type Database = {
           height: number | null;
           taken_at: string | null;
           status: MediaStatus;
+          deleted_at: string | null;
           created_at: string;
         };
         Insert: {
