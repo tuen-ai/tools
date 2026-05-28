@@ -5,6 +5,7 @@ import { requireEventAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { SettingsForm } from "./form";
+import { CleanupPanel } from "./cleanup-panel";
 
 interface Props {
   params: Promise<{ eventId: string }>;
@@ -32,6 +33,7 @@ export default async function EventSettingsPage({ params }: Props) {
         </p>
       </header>
       <SettingsForm event={event} />
+      <CleanupPanel eventId={event.id} />
     </div>
   );
 }

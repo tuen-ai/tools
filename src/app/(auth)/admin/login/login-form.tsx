@@ -40,6 +40,24 @@ export function LoginForm() {
         />
       </label>
 
+      {mode === "signup" ? (
+        <label className="block">
+          <span className="text-sm text-ink-700 font-medium">
+            Invite code
+          </span>
+          <span className="block text-[11px] text-ink-500">
+            Get this from the couple or an existing admin.
+          </span>
+          <input
+            name="inviteCode"
+            type="text"
+            required
+            autoComplete="off"
+            className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition font-mono"
+          />
+        </label>
+      ) : null}
+
       {state.error ? (
         <div
           className={`rounded-xl px-4 py-3 text-sm ${

@@ -16,7 +16,8 @@ couple sees them in a private admin gallery.
 - [x] Phase 2: guest upload flow
 - [x] Phase 3: admin dashboard
 - [x] Phase 4: realtime gallery (admin-only)
-- [ ] Phase 5: scaling + security hardening
+- [x] Phase 5 (partial): signup gate, rate limit, storage cleanup, server-only guards
+- [ ] Phase 5 (rest): email confirmation, retry-on-upload, scheduled hard-delete cron, OG meta
 
 ## Running locally
 
@@ -161,8 +162,12 @@ Shared limits live in `src/lib/upload/constants.ts`:
 RLS is still in place — the helpers are defence in depth, not the only
 gate.
 
-**Sign-up is currently open to anyone with the URL.** Before launch, gate
-this via invite codes or an email allowlist. (Note in `actions.ts`.)
+### Signup gating
+
+`ADMIN_SIGNUP_INVITE_CODE` (server env, optional). When set, the sign-up
+form requires this exact code. When unset, signups are **closed** — add
+admins via the Supabase dashboard. The check uses constant-time compare
+to dodge timing side-channels. See `src/lib/auth/actions.ts`.
 
 ## Realtime (Phase 4)
 
@@ -180,6 +185,35 @@ disconnected — handy when running over flaky conference Wi-Fi.
 Bundle impact: the admin event page grew from ~1.7 KB to ~80 KB
 (`@supabase/realtime-js`). Acceptable for an admin-only surface; the
 guest upload page is untouched at 3.19 KB.
+
+## Hardening (Phase 5)
+
+### server-only guards
+
+`src/lib/supabase/admin.ts` (service-role) and `src/lib/supabase/server.ts`
+both `import "server-only"`. Any client component that transitively imports
+either fails the Next.js build with a clear error — this is stronger than
+an ESLint warning because it can't be bypassed by ignoring lint output.
+
+### Rate limit
+
+`src/lib/rate-limit.ts` implements a per-IP token bucket. Applied to
+`/api/upload/sign` at burst 20 / refill 0.5 per second (≈30/min steady
+state). In-memory, per-instance — fine for MVP; swap for Upstash Redis
+when running multi-region or expecting abuse.
+
+429 responses include a `Retry-After` header in seconds.
+
+### Storage cleanup
+
+`/admin/[eventId]/settings` has a "Clean up storage" button that removes:
+
+1. Orphaned storage objects (uploaded but `finalize` never landed).
+2. Soft-deleted media (`status = 'deleted'`) and their storage objects.
+
+There is no grace period — clicking the button is the admin's explicit
+intent. The action is in
+`src/app/(admin)/admin/[eventId]/settings/cleanup-action.ts`.
 
 ## Things deliberately deferred
 
