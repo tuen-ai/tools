@@ -15,7 +15,7 @@ couple sees them in a private admin gallery.
 - [x] Phase 1: architecture, schema, flows, folder structure
 - [x] Phase 2: guest upload flow
 - [x] Phase 3: admin dashboard
-- [ ] Phase 4: realtime gallery (admin-only)
+- [x] Phase 4: realtime gallery (admin-only)
 - [ ] Phase 5: scaling + security hardening
 
 ## Running locally
@@ -120,8 +120,10 @@ Phase 2.)
 - `admin.ts` — service-role, **bypasses RLS**. Only import from
   `route.ts` files. An ESLint rule to enforce this is on the Phase 5
   hardening list.
-- `browser.ts` — for client-side use (Realtime subscriptions in Phase 4).
-  Currently unused; ready to be imported when we wire the live gallery.
+- `browser.ts` — used by the admin media grid to subscribe to Realtime.
+  Its session JWT comes from the auth cookie set by the server, so RLS
+  evaluates against the signed-in admin and "Admins can read media of
+  their events" gates which rows the channel can deliver.
 
 ## Upload contract
 
@@ -161,6 +163,23 @@ gate.
 
 **Sign-up is currently open to anyone with the URL.** Before launch, gate
 this via invite codes or an email allowlist. (Note in `actions.ts`.)
+
+## Realtime (Phase 4)
+
+`0003_realtime.sql` adds `public.media` to the `supabase_realtime`
+publication and sets `REPLICA IDENTITY FULL` so UPDATE events carry the
+previous row too. The admin media grid subscribes via
+`createSupabaseBrowserClient()` to a channel filtered by
+`event_id=eq.<id>`. INSERT events prepend the new tile (with a "New"
+ribbon for 4s); UPDATE events overwrite the row in state so a hide /
+delete from another admin's tab is reflected instantly.
+
+A small status dot in the grid header shows connecting / live /
+disconnected — handy when running over flaky conference Wi-Fi.
+
+Bundle impact: the admin event page grew from ~1.7 KB to ~80 KB
+(`@supabase/realtime-js`). Acceptable for an admin-only surface; the
+guest upload page is untouched at 3.19 KB.
 
 ## Things deliberately deferred
 

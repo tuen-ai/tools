@@ -58,10 +58,6 @@ export default async function EventDashboardPage({ params }: Props) {
         </nav>
       </header>
 
-      <div className="text-sm text-ink-500">
-        {page.total} photo{page.total === 1 ? "" : "s"}
-      </div>
-
       <MediaGrid
         eventId={eventId}
         initialRows={page.rows}
