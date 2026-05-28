@@ -1,26 +1,43 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventBySlug } from "@/lib/db/events";
+import { DICT, resolveLang } from "@/lib/i18n";
+import { LanguageSwitch } from "@/lib/i18n/language-switch";
 import { UploadClient } from "./upload-client";
 import { ClosedScreen } from "./closed";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ lang?: string }>;
 }
 
-export const revalidate = 60;
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
+  const [{ slug }, sp, hdrs] = await Promise.all([
+    params,
+    searchParams,
+    headers(),
+  ]);
   const event = await getEventBySlug(createAdminClient(), slug);
   if (!event) return { title: "Event not found" };
 
-  const title = `${event.couple_names} — Share your photos`;
+  const lang = resolveLang({
+    searchParamLang: sp.lang,
+    acceptLanguage: hdrs.get("accept-language"),
+  });
+  const t = DICT[lang];
+
+  const title = `${event.couple_names} — ${t.eyebrow}`;
   const description =
     event.welcome_message ??
-    `Send your photos straight to ${event.couple_names}.`;
+    (lang === "zh-Hant"
+      ? `將您的相片直接分享給 ${event.couple_names}。`
+      : `Send your photos straight to ${event.couple_names}.`);
 
   return {
     title,
@@ -29,30 +46,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       type: "website",
-      siteName: "Wedding photo sharing",
+      siteName: t.eyebrow,
     },
-    twitter: {
-      card: "summary",
-      title,
-      description,
-    },
-    robots: { index: false, follow: false }, // event pages are private
+    twitter: { card: "summary", title, description },
+    robots: { index: false, follow: false },
   };
 }
 
-export default async function GuestEventPage({ params }: Props) {
-  const { slug } = await params;
+export default async function GuestEventPage({ params, searchParams }: Props) {
+  const [{ slug }, sp, hdrs] = await Promise.all([
+    params,
+    searchParams,
+    headers(),
+  ]);
   const admin = createAdminClient();
   const event = await getEventBySlug(admin, slug);
 
   if (!event) notFound();
+
+  const lang = resolveLang({
+    searchParamLang: sp.lang,
+    acceptLanguage: hdrs.get("accept-language"),
+  });
+  const t = DICT[lang];
 
   return (
     <main className="min-h-dvh flex flex-col items-center px-5 py-10 sm:py-16">
       <div className="w-full max-w-md">
         <header className="text-center mb-8">
           <p className="uppercase tracking-[0.25em] text-xs text-blush-600 mb-3">
-            Wedding photo sharing
+            {t.eyebrow}
           </p>
           <h1 className="font-serif text-3xl sm:text-4xl text-ink-900 leading-tight">
             {event.couple_names}
@@ -66,12 +89,17 @@ export default async function GuestEventPage({ params }: Props) {
 
         {event.upload_enabled ? (
           <UploadClient
+            lang={lang}
             eventSlug={event.slug}
             maxPerGuest={event.max_uploads_per_guest}
           />
         ) : (
-          <ClosedScreen />
+          <ClosedScreen lang={lang} />
         )}
+
+        <div className="mt-8">
+          <LanguageSwitch current={lang} basePath={`/e/${event.slug}`} />
+        </div>
       </div>
     </main>
   );

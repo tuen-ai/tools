@@ -12,6 +12,7 @@ import {
   uploadGuestPhotos,
   type UploadItem,
 } from "@/lib/upload/client-upload";
+import { DICT, type Lang } from "@/lib/i18n";
 
 const FP_KEY = "wgp.fingerprint";
 const NAME_KEY = "wgp.name";
@@ -30,11 +31,13 @@ function isAllowedMime(t: string): t is AllowedMime {
 }
 
 interface Props {
+  lang: Lang;
   eventSlug: string;
   maxPerGuest: number;
 }
 
-export function UploadClient({ eventSlug, maxPerGuest }: Props) {
+export function UploadClient({ lang, eventSlug, maxPerGuest }: Props) {
+  const t = DICT[lang];
   const [fingerprint, setFingerprint] = useState("");
   const [name, setName] = useState("");
   const [items, setItems] = useState<UploadItem[]>([]);
@@ -55,7 +58,8 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
   const doneCount = items.filter((i) => i.status === "done").length;
   const failedCount = items.filter((i) => i.status === "failed").length;
   const allFinished =
-    items.length > 0 && items.every((i) => i.status === "done" || i.status === "failed");
+    items.length > 0 &&
+    items.every((i) => i.status === "done" || i.status === "failed");
 
   function patchItem(id: string, patch: Partial<UploadItem>) {
     setItems((prev) =>
@@ -65,18 +69,18 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
-    e.target.value = ""; // allow re-picking the same file later
+    e.target.value = "";
 
     const accepted: UploadItem[] = [];
     const rejected: string[] = [];
 
     for (const file of files) {
       if (!isAllowedMime(file.type)) {
-        rejected.push(`${file.name}: unsupported format`);
+        rejected.push(t.errUnsupported(file.name));
         continue;
       }
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        rejected.push(`${file.name}: over 25 MB`);
+        rejected.push(t.errOverSize(file.name));
         continue;
       }
       accepted.push({
@@ -88,9 +92,7 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
     }
 
     if (accepted.length > MAX_FILES_PER_REQUEST) {
-      rejected.push(
-        `Only the first ${MAX_FILES_PER_REQUEST} photos were added.`,
-      );
+      rejected.push(t.errTruncated(MAX_FILES_PER_REQUEST));
       accepted.length = MAX_FILES_PER_REQUEST;
     }
 
@@ -126,6 +128,7 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
   if (allFinished) {
     return (
       <ThankYou
+        lang={lang}
         doneCount={doneCount}
         failedCount={failedCount}
         onAddMore={reset}
@@ -137,13 +140,14 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
     <div className="bg-white rounded-3xl shadow-soft p-6 sm:p-8 space-y-5">
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">
-          Your name <span className="text-ink-500 font-normal">(optional)</span>
+          {t.yourName}{" "}
+          <span className="text-ink-500 font-normal">{t.optional}</span>
         </span>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Aunt Linda"
+          placeholder={t.yourNamePlaceholder}
           maxLength={64}
           disabled={isUploading}
           className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
@@ -171,10 +175,10 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
             📸
           </div>
           <div className="font-serif text-lg text-ink-900">
-            Choose photos to share
+            {t.choosePhotos}
           </div>
           <div className="text-xs text-ink-500 mt-1">
-            JPEG, PNG, WebP, or HEIC · up to {MAX_FILES_PER_REQUEST} at a time
+            {t.chooseHelp(MAX_FILES_PER_REQUEST)}
           </div>
         </label>
       ) : (
@@ -186,7 +190,7 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
                 htmlFor="wgp-file-input"
                 className="flex-1 cursor-pointer rounded-xl bg-cream-100 px-4 py-3 text-center text-sm text-ink-700 hover:bg-cream-200 transition"
               >
-                Change photos
+                {t.changePhotos}
               </label>
             ) : null}
             <button
@@ -196,8 +200,8 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
               className="flex-1 rounded-xl bg-blush-500 px-4 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 disabled:opacity-60 disabled:cursor-not-allowed transition"
             >
               {isUploading
-                ? `Sending… ${doneCount}/${items.length}`
-                : `Send ${items.length} photo${items.length === 1 ? "" : "s"}`}
+                ? t.sending(doneCount, items.length)
+                : t.send(items.length)}
             </button>
           </div>
         </>
@@ -210,8 +214,7 @@ export function UploadClient({ eventSlug, maxPerGuest }: Props) {
       ) : null}
 
       <p className="text-[11px] text-ink-500 text-center leading-relaxed">
-        Up to {maxPerGuest} photos per guest. Your photos are private to the
-        couple.
+        {t.privacyNote(maxPerGuest)}
       </p>
     </div>
   );
@@ -293,32 +296,33 @@ function StatusBadge({ status }: { status: UploadItem["status"] }) {
 }
 
 function ThankYou({
+  lang,
   doneCount,
   failedCount,
   onAddMore,
 }: {
+  lang: Lang;
   doneCount: number;
   failedCount: number;
   onAddMore: () => void;
 }) {
+  const t = DICT[lang];
   return (
     <div className="bg-white rounded-3xl shadow-soft p-8 text-center">
       <div className="text-5xl mb-4" aria-hidden>
         💝
       </div>
-      <h2 className="font-serif text-2xl text-ink-900 mb-2">Thank you!</h2>
+      <h2 className="font-serif text-2xl text-ink-900 mb-2">{t.thanksTitle}</h2>
       <p className="text-ink-700 text-sm leading-relaxed mb-6">
-        {doneCount} photo{doneCount === 1 ? "" : "s"} sent to the couple.
-        {failedCount > 0
-          ? ` ${failedCount} couldn’t be sent — please try those again.`
-          : ""}
+        {t.thanksBody(doneCount)}
+        {failedCount > 0 ? t.thanksFailed(failedCount) : ""}
       </p>
       <button
         type="button"
         onClick={onAddMore}
         className="rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 transition"
       >
-        Add more photos
+        {t.addMore}
       </button>
     </div>
   );
