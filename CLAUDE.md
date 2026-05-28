@@ -13,10 +13,41 @@ couple sees them in a private admin gallery.
 ## Phase status
 
 - [x] Phase 1: architecture, schema, flows, folder structure
-- [ ] Phase 2: guest upload flow
+- [x] Phase 2: guest upload flow
 - [ ] Phase 3: admin dashboard
 - [ ] Phase 4: realtime gallery (admin-only)
 - [ ] Phase 5: scaling + security hardening
+
+## Running locally
+
+```bash
+cp .env.local.example .env.local
+# fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+# and SUPABASE_SERVICE_ROLE_KEY from your Supabase project settings
+npm install
+npm run dev
+```
+
+Apply migrations against your Supabase project before first run:
+
+```bash
+# via the Supabase CLI:
+supabase db push
+# or paste supabase/migrations/0001_init.sql + 0002_storage.sql into
+# the SQL editor for a hosted project
+```
+
+To test the guest flow you'll need at least one event row. Quick seed:
+
+```sql
+-- assuming auth.uid() returns a real user id when you're signed in via the dashboard
+insert into events (slug, couple_names, welcome_message, created_by)
+values ('test-wedding', 'Test & Wedding',
+        'Share your favourite photos with us!',
+        (select id from auth.users limit 1));
+```
+
+Then visit http://localhost:3000/e/test-wedding.
 
 ## Architectural decisions
 
@@ -82,16 +113,28 @@ Phase 2.)
 - Guest: `https://<domain>/e/<slug>` (slug is `^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$`)
 - Admin: `https://<domain>/admin` and `/admin/[eventId]`
 
-## Three Supabase clients
+## Supabase clients in `src/lib/supabase/`
 
-When Phase 2 lands, expect three client factories in `src/lib/supabase/`:
+- `server.ts` — anon-keyed, cookie-bound, RLS applies. Use from RSC and
+  route handlers when the caller's permissions should be enforced.
+- `admin.ts` — service-role, **bypasses RLS**. Only import from
+  `route.ts` files. An ESLint rule to enforce this is on the Phase 5
+  hardening list.
+- `browser.ts` — not yet added. Will appear in Phase 3 for admin
+  Realtime subscriptions; not needed for the guest flow since all guest
+  writes go through `/api/*`.
 
-- `server.ts` — RSC + route handlers, reads/writes cookies
-- `browser.ts` — client components only
-- `admin.ts` — service-role; **only import from `route.ts` files**
+## Upload contract
 
-An ESLint rule should enforce that `admin.ts` is never imported from a
-component file. Bypassing RLS in a component would be a security incident.
+`POST /api/upload/sign` is one round-trip per batch (up to 10 files). It
+upserts the guest row, enforces `max_uploads_per_guest`, and returns N
+signed PUT URLs + media IDs. The client PUTs files directly to Supabase
+Storage (max 3 concurrent on mobile) with XHR progress, then POSTs each
+to `/api/media/finalize`. Finalize HEADs the storage object and inserts
+the `media` row — never trust the client about what was actually stored.
+
+Shared limits live in `src/lib/upload/constants.ts`:
+25 MB/file, 10 files/request, JPEG/PNG/WebP/HEIC/HEIF.
 
 ## Things deliberately deferred
 
