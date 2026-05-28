@@ -14,7 +14,7 @@ couple sees them in a private admin gallery.
 
 - [x] Phase 1: architecture, schema, flows, folder structure
 - [x] Phase 2: guest upload flow
-- [ ] Phase 3: admin dashboard
+- [x] Phase 3: admin dashboard
 - [ ] Phase 4: realtime gallery (admin-only)
 - [ ] Phase 5: scaling + security hardening
 
@@ -120,9 +120,8 @@ Phase 2.)
 - `admin.ts` — service-role, **bypasses RLS**. Only import from
   `route.ts` files. An ESLint rule to enforce this is on the Phase 5
   hardening list.
-- `browser.ts` — not yet added. Will appear in Phase 3 for admin
-  Realtime subscriptions; not needed for the guest flow since all guest
-  writes go through `/api/*`.
+- `browser.ts` — for client-side use (Realtime subscriptions in Phase 4).
+  Currently unused; ready to be imported when we wire the live gallery.
 
 ## Upload contract
 
@@ -135,6 +134,33 @@ the `media` row — never trust the client about what was actually stored.
 
 Shared limits live in `src/lib/upload/constants.ts`:
 25 MB/file, 10 files/request, JPEG/PNG/WebP/HEIC/HEIF.
+
+## Admin surfaces (Phase 3)
+
+| Route | Purpose |
+|-------|---------|
+| `/admin/login` | Email + password sign-in & sign-up (one form, two modes) |
+| `/admin` | Event list for the current user |
+| `/admin/new` | Create a new event |
+| `/admin/[eventId]` | Media grid with hide/delete/restore + download |
+| `/admin/[eventId]/settings` | Edit couple's names, welcome msg, upload kill-switch |
+| `/admin/[eventId]/qr` | Printable QR with `@media print` styles |
+
+**Route groups in use:**
+- `(auth)/admin/login` — public, renders without admin chrome.
+- `(admin)/admin/*` — everything else; layout enforces `requireSession()`.
+
+**Auth is enforced in two layers:**
+1. RSC pages call `requireSession()` / `requireEventAdmin()` (in
+   `src/lib/auth/require-admin.ts`), which `redirect()` on failure.
+2. Server actions and route handlers call `assertEventAdmin()`, which
+   throws `AuthorizationError` and gets mapped to 401/403 JSON.
+
+RLS is still in place — the helpers are defence in depth, not the only
+gate.
+
+**Sign-up is currently open to anyone with the URL.** Before launch, gate
+this via invite codes or an email allowlist. (Note in `actions.ts`.)
 
 ## Things deliberately deferred
 
