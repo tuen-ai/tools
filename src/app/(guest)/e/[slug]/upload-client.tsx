@@ -34,10 +34,22 @@ interface Props {
   lang: Lang;
   eventSlug: string;
   maxPerGuest: number;
+  primaryColor: string | null;
 }
 
-export function UploadClient({ lang, eventSlug, maxPerGuest }: Props) {
+export function UploadClient({
+  lang,
+  eventSlug,
+  maxPerGuest,
+  primaryColor,
+}: Props) {
   const t = DICT[lang];
+  const primaryButtonClass = primaryColor
+    ? "flex-1 rounded-xl px-4 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed transition"
+    : "flex-1 rounded-xl bg-blush-500 px-4 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 disabled:opacity-60 disabled:cursor-not-allowed transition";
+  const primaryButtonStyle = primaryColor
+    ? { backgroundColor: primaryColor }
+    : undefined;
   const [fingerprint, setFingerprint] = useState("");
   const [name, setName] = useState("");
   const [items, setItems] = useState<UploadItem[]>([]);
@@ -131,6 +143,7 @@ export function UploadClient({ lang, eventSlug, maxPerGuest }: Props) {
         lang={lang}
         doneCount={doneCount}
         failedCount={failedCount}
+        primaryColor={primaryColor}
         onAddMore={reset}
       />
     );
@@ -197,7 +210,8 @@ export function UploadClient({ lang, eventSlug, maxPerGuest }: Props) {
               type="button"
               onClick={handleUpload}
               disabled={isUploading}
-              className="flex-1 rounded-xl bg-blush-500 px-4 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 disabled:opacity-60 disabled:cursor-not-allowed transition"
+              className={primaryButtonClass}
+              style={primaryButtonStyle}
             >
               {isUploading
                 ? t.sending(doneCount, items.length)
@@ -299,11 +313,13 @@ function ThankYou({
   lang,
   doneCount,
   failedCount,
+  primaryColor,
   onAddMore,
 }: {
   lang: Lang;
   doneCount: number;
   failedCount: number;
+  primaryColor: string | null;
   onAddMore: () => void;
 }) {
   const t = DICT[lang];
@@ -320,7 +336,12 @@ function ThankYou({
       <button
         type="button"
         onClick={onAddMore}
-        className="rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 transition"
+        className={
+          primaryColor
+            ? "rounded-xl px-5 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 transition"
+            : "rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 transition"
+        }
+        style={primaryColor ? { backgroundColor: primaryColor } : undefined}
       >
         {t.addMore}
       </button>

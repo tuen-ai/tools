@@ -53,6 +53,11 @@ export async function generateMetadata({
   };
 }
 
+function readPrimaryColor(theme: Record<string, unknown> | null): string | null {
+  const v = theme?.["primaryColor"];
+  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
+}
+
 export default async function GuestEventPage({ params, searchParams }: Props) {
   const [{ slug }, sp, hdrs] = await Promise.all([
     params,
@@ -69,12 +74,18 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
     acceptLanguage: hdrs.get("accept-language"),
   });
   const t = DICT[lang];
+  const primaryColor = readPrimaryColor(event.theme);
 
   return (
     <main className="min-h-dvh flex flex-col items-center px-5 py-10 sm:py-16">
       <div className="w-full max-w-md">
         <header className="text-center mb-8">
-          <p className="uppercase tracking-[0.25em] text-xs text-blush-600 mb-3">
+          <p
+            className={`uppercase tracking-[0.25em] text-xs mb-3 ${
+              primaryColor ? "" : "text-blush-600"
+            }`}
+            style={primaryColor ? { color: primaryColor } : undefined}
+          >
             {t.eyebrow}
           </p>
           <h1 className="font-serif text-3xl sm:text-4xl text-ink-900 leading-tight">
@@ -92,6 +103,7 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
             lang={lang}
             eventSlug={event.slug}
             maxPerGuest={event.max_uploads_per_guest}
+            primaryColor={primaryColor}
           />
         ) : (
           <ClosedScreen lang={lang} />

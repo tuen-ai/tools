@@ -14,6 +14,12 @@ const Schema = z.object({
   event_date: z.string().optional(),
   upload_enabled: z.boolean(),
   max_uploads_per_guest: z.coerce.number().int().min(1).max(500),
+  // Hex like #RRGGBB. Empty string clears the theme back to default.
+  primary_color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Primary color must be like #RRGGBB")
+    .or(z.literal(""))
+    .optional(),
 });
 
 export interface UpdateEventResult {
@@ -33,6 +39,7 @@ export async function updateEventAction(
     event_date: formData.get("event_date") || undefined,
     upload_enabled: formData.get("upload_enabled") === "on",
     max_uploads_per_guest: formData.get("max_uploads_per_guest"),
+    primary_color: formData.get("primary_color") ?? undefined,
   });
   if (!parsed.success) {
     return {
@@ -51,12 +58,20 @@ export async function updateEventAction(
   }
 
   const admin = createAdminClient();
+
+  // Merge theme — clear primary color if empty, set otherwise.
+  const theme: Record<string, unknown> = {};
+  if (parsed.data.primary_color) {
+    theme.primaryColor = parsed.data.primary_color;
+  }
+
   await updateEvent(admin, parsed.data.eventId, {
     couple_names: parsed.data.couple_names,
     welcome_message: parsed.data.welcome_message ?? null,
     event_date: parsed.data.event_date ?? null,
     upload_enabled: parsed.data.upload_enabled,
     max_uploads_per_guest: parsed.data.max_uploads_per_guest,
+    theme,
   });
 
   revalidatePath(`/admin/${parsed.data.eventId}`);

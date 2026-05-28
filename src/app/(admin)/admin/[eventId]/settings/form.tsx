@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import type { Database } from "@/types/database";
 import { updateEventAction, type UpdateEventResult } from "./actions";
@@ -8,9 +8,20 @@ import { updateEventAction, type UpdateEventResult } from "./actions";
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
 const INITIAL: UpdateEventResult = { ok: true };
+const DEFAULT_PRIMARY = "#D9989E";
+
+function readPrimaryColor(theme: Record<string, unknown> | null): string {
+  const v = theme?.["primaryColor"];
+  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)
+    ? v
+    : DEFAULT_PRIMARY;
+}
 
 export function SettingsForm({ event }: { event: EventRow }) {
   const [state, action, pending] = useActionState(updateEventAction, INITIAL);
+  const initialColor = readPrimaryColor(event.theme);
+  const [primaryColor, setPrimaryColor] = useState(initialColor);
+  const isDefault = primaryColor.toLowerCase() === DEFAULT_PRIMARY.toLowerCase();
 
   return (
     <form
@@ -87,6 +98,56 @@ export function SettingsForm({ event }: { event: EventRow }) {
           </span>
         </span>
       </label>
+
+      <div className="rounded-xl border border-cream-200 p-4">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <span className="text-sm font-medium text-ink-900">Primary color</span>
+          {!isDefault ? (
+            <button
+              type="button"
+              onClick={() => setPrimaryColor(DEFAULT_PRIMARY)}
+              className="text-[11px] text-ink-500 hover:text-ink-900 transition"
+            >
+              Reset to default
+            </button>
+          ) : null}
+        </div>
+        <p className="text-xs text-ink-500 mb-3">
+          Applied to the upload page header and primary button. Pick a
+          shade that matches your invitations.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={primaryColor}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+            className="h-10 w-14 rounded cursor-pointer border border-cream-200"
+            aria-label="Primary color"
+          />
+          <input
+            type="text"
+            value={primaryColor}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+            pattern="^#[0-9a-fA-F]{6}$"
+            maxLength={7}
+            className="flex-1 rounded-xl border border-cream-200 bg-cream-50 px-4 py-2 text-sm font-mono outline-none focus:border-blush-500 focus:bg-white transition"
+          />
+          <span
+            className="inline-block rounded-full"
+            style={{
+              backgroundColor: primaryColor,
+              width: "2.5rem",
+              height: "2.5rem",
+            }}
+            aria-hidden
+          />
+        </div>
+        <input
+          type="hidden"
+          name="primary_color"
+          value={isDefault ? "" : primaryColor}
+        />
+      </div>
 
       {state.error ? (
         <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
