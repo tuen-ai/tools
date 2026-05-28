@@ -18,6 +18,8 @@ couple sees them in a private admin gallery.
 - [x] Phase 4: realtime gallery (admin-only)
 - [x] Phase 5: signup gate, rate limit, storage cleanup, server-only
       guards, upload retry, OG meta, scheduled hard-delete cron
+- [x] Phase 6: i18n (en / 繁中), custom theme color, guest messages,
+      ZIP album export
 
 ## Running locally
 
@@ -260,6 +262,43 @@ production — otherwise confirmations queue indefinitely.
 iMessage gets a preview card with the couple's names and welcome
 message. Marked `robots: { index: false }` because event pages are
 private.
+
+## Phase 6 polish
+
+### i18n (guest side only)
+
+`src/lib/i18n/` provides a typed dictionary keyed on `Lang`
+(`'en' | 'zh-Hant'`). Server resolves language in order: `?lang=` query
+param → `Accept-Language` header → `'en'` fallback. `zh-tw`, `zh-hk`,
+`zh-mo` all map to `zh-Hant`. Pages pass the resolved Lang down as a
+prop. Admin surface stays English.
+
+### Custom theme
+
+`events.theme.primaryColor` (hex `#RRGGBB`) is applied to the eyebrow
+label and the primary action buttons via inline style + `hover:brightness-90`.
+When unset, the default Tailwind blush palette wins. Font selection
+and cover-image upload deferred — `next/font` makes runtime font
+selection a real project.
+
+### Guest messages
+
+`messages` table holds optional notes posted alongside an upload batch.
+Submitted via the same `/api/upload/sign` body (`message` field);
+insertion failure is logged but doesn't fail uploads. Admin event page
+shows a Messages panel above the media grid with realtime INSERT and
+DELETE, hover-to-reveal removal. Realtime payloads don't carry the
+joined `guests` row, so freshly-arrived messages show "Guest" until
+page reload — known limitation.
+
+### ZIP album export
+
+`/api/admin/events/[id]/export` streams a ZIP of all visible media for
+the event. Node.js runtime, `archiver` package, store-mode (no
+compression — JPEG/PNG/HEIC don't compress). Sequential downloads keep
+memory bounded. `maxDuration = 60` (Vercel Pro). Works comfortably for
+albums up to ~500 photos; larger ones may need a smarter
+stream-direct-from-storage approach or a one-off batch script.
 
 ## Things deliberately deferred
 

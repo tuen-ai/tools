@@ -47,6 +47,13 @@ export default async function EventDashboardPage({ params }: Props) {
           </h1>
         </div>
         <nav className="flex items-center gap-2 text-sm">
+          <a
+            href={`/api/admin/events/${eventId}/export`}
+            className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
+            title="Download all visible photos as ZIP"
+          >
+            Download all
+          </a>
           <Link
             href={`/admin/${eventId}/qr`}
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
