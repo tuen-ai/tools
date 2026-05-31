@@ -4,11 +4,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { Database, MediaStatus } from "@/types/database";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { ADMIN_DICT, type AdminDict } from "@/lib/i18n/admin-dict";
+import type { Lang } from "@/lib/i18n";
 import { setMediaStatusAction } from "./actions";
 
 type MediaRow = Database["public"]["Tables"]["media"]["Row"];
 
 interface Props {
+  lang: Lang;
   eventId: string;
   initialRows: MediaRow[];
   initialThumbs: Record<string, string>;
@@ -25,12 +28,14 @@ interface MorePageResponse {
 const FRESH_HIGHLIGHT_MS = 4000;
 
 export function MediaGrid({
+  lang,
   eventId,
   initialRows,
   initialThumbs,
   total: initialTotal,
   pageSize,
 }: Props) {
+  const t = ADMIN_DICT[lang];
   const [rows, setRows] = useState<MediaRow[]>(initialRows);
   const [thumbs, setThumbs] = useState<Record<string, string>>(initialThumbs);
   const [total, setTotal] = useState(initialTotal);
@@ -134,22 +139,21 @@ export function MediaGrid({
 
   return (
     <>
-      <LiveBadge status={liveStatus} count={total} />
+      <LiveBadge status={liveStatus} count={total} t={t} />
 
       {visibleRows.length === 0 ? (
         <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center">
           <div className="text-4xl mb-3" aria-hidden>
             📷
           </div>
-          <p className="text-ink-500 text-sm">
-            No photos yet. Share the QR code with your guests to start.
-          </p>
+          <p className="text-ink-500 text-sm">{t.gridEmpty}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {visibleRows.map((row) => (
             <MediaTile
               key={row.id}
+              t={t}
               row={row}
               thumb={thumbs[row.id]}
               isFresh={freshIds.has(row.id)}
@@ -175,8 +179,8 @@ export function MediaGrid({
             className="rounded-xl border border-cream-200 bg-white px-5 py-2.5 text-sm hover:border-blush-400 disabled:opacity-60 transition"
           >
             {loadingMore
-              ? "Loading…"
-              : `Load more (${total - visibleRows.length} left)`}
+              ? t.loadingMore
+              : t.loadMore(total - visibleRows.length)}
           </button>
         </div>
       ) : null}
@@ -187,9 +191,11 @@ export function MediaGrid({
 function LiveBadge({
   status,
   count,
+  t,
 }: {
   status: "connecting" | "live" | "offline";
   count: number;
+  t: AdminDict;
 }) {
   const dot =
     status === "live"
@@ -199,16 +205,14 @@ function LiveBadge({
         : "bg-ink-500/50";
   const label =
     status === "live"
-      ? "Live"
+      ? t.liveLive
       : status === "offline"
-        ? "Disconnected"
-        : "Connecting…";
+        ? t.liveOffline
+        : t.liveConnecting;
 
   return (
     <div className="flex items-center justify-between text-sm text-ink-500">
-      <span>
-        {count} photo{count === 1 ? "" : "s"}
-      </span>
+      <span>{t.photoCount(count)}</span>
       <span className="inline-flex items-center gap-1.5">
         <span className={`h-2 w-2 rounded-full ${dot}`} />
         {label}
@@ -218,6 +222,7 @@ function LiveBadge({
 }
 
 function MediaTile({
+  t,
   row,
   thumb,
   isFresh,
@@ -226,6 +231,7 @@ function MediaTile({
   onClose,
   onStatusChanged,
 }: {
+  t: AdminDict;
   row: MediaRow;
   thumb: string | undefined;
   isFresh: boolean;
@@ -282,17 +288,17 @@ function MediaTile({
 
       {isVideo ? (
         <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5 pointer-events-none">
-          ▶ Video
+          {t.tileVideo}
         </span>
       ) : null}
       {row.status === "hidden" ? (
         <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5">
-          Hidden
+          {t.tileHidden}
         </span>
       ) : null}
       {isFresh ? (
         <span className="absolute top-2 right-2 text-[10px] uppercase tracking-wider bg-blush-500 text-white rounded px-1.5 py-0.5 animate-[pop_400ms_ease-out]">
-          New
+          {t.tileNew}
         </span>
       ) : null}
 
@@ -327,7 +333,7 @@ function MediaTile({
                 href={`/api/admin/media/${row.id}/url`}
                 className="rounded-xl bg-cream-100 px-3 py-2.5 text-center text-sm hover:bg-cream-200 transition"
               >
-                Download
+                {t.modalDownload}
               </a>
               {row.status === "visible" ? (
                 <button
@@ -336,7 +342,7 @@ function MediaTile({
                   disabled={pending}
                   className="rounded-xl bg-cream-100 px-3 py-2.5 text-sm hover:bg-cream-200 disabled:opacity-60 transition"
                 >
-                  Hide
+                  {t.modalHide}
                 </button>
               ) : (
                 <button
@@ -345,7 +351,7 @@ function MediaTile({
                   disabled={pending}
                   className="rounded-xl bg-cream-100 px-3 py-2.5 text-sm hover:bg-cream-200 disabled:opacity-60 transition"
                 >
-                  Unhide
+                  {t.modalUnhide}
                 </button>
               )}
               <button
@@ -354,7 +360,7 @@ function MediaTile({
                 disabled={pending}
                 className="rounded-xl bg-blush-400/15 text-blush-600 px-3 py-2.5 text-sm hover:bg-blush-400/25 disabled:opacity-60 transition"
               >
-                Delete
+                {t.modalDelete}
               </button>
             </div>
             <button
@@ -362,7 +368,7 @@ function MediaTile({
               onClick={onClose}
               className="mt-2 w-full rounded-xl px-3 py-2.5 text-sm text-ink-500 hover:text-ink-900 transition"
             >
-              Close
+              {t.modalClose}
             </button>
           </div>
         </div>

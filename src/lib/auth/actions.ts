@@ -29,7 +29,7 @@ export async function signInAction(
     password: formData.get("password"),
   });
   if (!parsed.success) {
-    return { ok: false, error: "Please enter a valid email and password." };
+    return { ok: false, error: "err_invalid_credentials" };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -46,11 +46,7 @@ export async function signUpAction(
   // Gate 1: signups are closed unless an invite code is configured.
   const expected = serverEnv.ADMIN_SIGNUP_INVITE_CODE;
   if (!expected) {
-    return {
-      ok: false,
-      error:
-        "Signups are closed. Ask an existing admin to add you, or have them set ADMIN_SIGNUP_INVITE_CODE.",
-    };
+    return { ok: false, error: "err_signups_closed" };
   }
 
   const parsed = SignUpSchema.safeParse({
@@ -59,16 +55,12 @@ export async function signUpAction(
     inviteCode: formData.get("inviteCode"),
   });
   if (!parsed.success) {
-    return {
-      ok: false,
-      error:
-        "Email, password (8+ chars), and invite code are all required.",
-    };
+    return { ok: false, error: "err_signup_validation" };
   }
 
   // Gate 2: constant-time compare to dodge timing side-channels.
   if (!constantTimeEqual(parsed.data.inviteCode, expected)) {
-    return { ok: false, error: "Invalid invite code." };
+    return { ok: false, error: "err_invalid_invite" };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -80,10 +72,7 @@ export async function signUpAction(
 
   const { data: sess } = await supabase.auth.getSession();
   if (!sess.session) {
-    return {
-      ok: true,
-      error: "Check your email to confirm your account, then sign in.",
-    };
+    return { ok: true, error: "err_check_email" };
   }
 
   redirect("/admin");

@@ -5,10 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventBySlug } from "@/lib/db/events";
 import { signThumbnailUrls, type SignedThumb } from "@/lib/db/media";
 import { STORAGE_BUCKET, isVideoMime } from "@/lib/upload/constants";
+import { resolveLangServer } from "@/lib/i18n/server";
 import { SlideshowClient, type Slide } from "./slideshow-client";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ lang?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -18,8 +20,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function SlideshowPage({ params }: Props) {
-  const { slug } = await params;
+export default async function SlideshowPage({ params, searchParams }: Props) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+  const lang = await resolveLangServer(sp.lang);
   const admin = createAdminClient();
   const event = await getEventBySlug(admin, slug);
   if (!event) notFound();
@@ -75,6 +78,7 @@ export default async function SlideshowPage({ params }: Props) {
 
   return (
     <SlideshowClient
+      lang={lang}
       eventSlug={event.slug}
       coupleNames={event.couple_names}
       initialSlides={initialSlides}

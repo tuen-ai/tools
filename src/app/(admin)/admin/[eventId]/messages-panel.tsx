@@ -3,6 +3,8 @@
 import { useEffect, useState, useTransition } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { ADMIN_DICT, type AdminDict } from "@/lib/i18n/admin-dict";
+import type { Lang } from "@/lib/i18n";
 import { deleteMessageAction } from "./message-actions";
 
 interface MessageRow {
@@ -14,13 +16,15 @@ interface MessageRow {
 }
 
 interface Props {
+  lang: Lang;
   eventId: string;
   initialRows: MessageRow[];
 }
 
 const FRESH_HIGHLIGHT_MS = 4000;
 
-export function MessagesPanel({ eventId, initialRows }: Props) {
+export function MessagesPanel({ lang, eventId, initialRows }: Props) {
+  const t = ADMIN_DICT[lang];
   const [rows, setRows] = useState<MessageRow[]>(initialRows);
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
 
@@ -80,12 +84,13 @@ export function MessagesPanel({ eventId, initialRows }: Props) {
   return (
     <section className="bg-white rounded-3xl border border-cream-200 p-5 space-y-3">
       <h2 className="font-serif text-lg text-ink-900">
-        Messages ({rows.length})
+        {t.messagesHeading(rows.length)}
       </h2>
       <ul className="space-y-2 max-h-96 overflow-y-auto pr-1">
         {rows.map((m) => (
           <MessageItem
             key={m.id}
+            t={t}
             eventId={eventId}
             row={m}
             isFresh={freshIds.has(m.id)}
@@ -100,11 +105,13 @@ export function MessagesPanel({ eventId, initialRows }: Props) {
 }
 
 function MessageItem({
+  t,
   eventId,
   row,
   isFresh,
   onRemoved,
 }: {
+  t: AdminDict;
   eventId: string;
   row: MessageRow;
   isFresh: boolean;
@@ -129,7 +136,7 @@ function MessageItem({
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-ink-900 truncate">
-          {name ?? <span className="text-ink-500 italic">Guest</span>}
+          {name ?? <span className="text-ink-500 italic">{t.guestPlaceholder}</span>}
         </span>
         <span className="text-[11px] text-ink-500 shrink-0">{when}</span>
       </div>
@@ -143,7 +150,7 @@ function MessageItem({
           disabled={pending}
           className="text-[11px] text-blush-600 hover:text-blush-500 disabled:opacity-60"
         >
-          {pending ? "Removing…" : "Remove"}
+          {pending ? t.removeMessagePending : t.removeMessage}
         </button>
       </div>
     </li>

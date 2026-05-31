@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { listMediaPage, signThumbnailUrls } from "@/lib/db/media";
 import { listMessagesPage } from "@/lib/db/messages";
+import { resolveLangServer } from "@/lib/i18n/server";
+import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { MediaGrid } from "./media-grid";
 import { MessagesPanel } from "./messages-panel";
 
@@ -20,15 +22,16 @@ export default async function EventDashboardPage({ params }: Props) {
   await requireEventAdmin(eventId);
 
   const admin = createAdminClient();
-  const [event, page, messages] = await Promise.all([
+  const [event, page, messages, lang] = await Promise.all([
     getEventById(admin, eventId),
     listMediaPage(admin, { eventId, offset: 0, limit: PAGE_SIZE }),
     listMessagesPage(admin, { eventId, offset: 0, limit: MESSAGE_LIMIT }),
+    resolveLangServer(),
   ]);
+  const t = ADMIN_DICT[lang];
 
   if (!event) {
-    // Shouldn't happen if requireEventAdmin passed, but guard anyway.
-    return <div className="text-ink-500">Event not found.</div>;
+    return <div className="text-ink-500">{t.eventNotFound}</div>;
   }
 
   const signed = await signThumbnailUrls(admin, page.rows);
@@ -39,7 +42,7 @@ export default async function EventDashboardPage({ params }: Props) {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-500 mb-1">
-            {event.upload_enabled ? "Uploads open" : "Uploads closed"} · /e/
+            {event.upload_enabled ? t.uploadsOpen : t.uploadsClosed} · /e/
             {event.slug}
           </p>
           <h1 className="font-serif text-2xl text-ink-900">
@@ -51,41 +54,52 @@ export default async function EventDashboardPage({ params }: Props) {
             href={`/e/${event.slug}/show`}
             target="_blank"
             className="rounded-lg bg-ink-900 text-white px-3 py-2 hover:bg-ink-700 transition"
-            title="Open slideshow in a new tab — mirror to your venue projector"
+            title={t.navSlideshowTitle}
           >
-            ▶ Slideshow
+            {t.navSlideshow}
           </Link>
           <a
             href={`/api/admin/events/${eventId}/export`}
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
-            title="Download all visible photos as ZIP"
+            title={t.navDownloadAllTitle}
           >
-            Download all
+            {t.navDownloadAll}
           </a>
           <Link
             href={`/admin/${eventId}/qr`}
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
           >
-            QR
+            {t.navQr}
+          </Link>
+          <Link
+            href={`/admin/${eventId}/poster`}
+            className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
+          >
+            {t.navPoster}
           </Link>
           <Link
             href={`/admin/${eventId}/tables`}
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
           >
-            Tables
+            {t.navTables}
           </Link>
           <Link
             href={`/admin/${eventId}/settings`}
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
           >
-            Settings
+            {t.navSettings}
           </Link>
         </nav>
       </header>
 
-      <MessagesPanel eventId={eventId} initialRows={messages.rows} />
+      <MessagesPanel
+        lang={lang}
+        eventId={eventId}
+        initialRows={messages.rows}
+      />
 
       <MediaGrid
+        lang={lang}
         eventId={eventId}
         initialRows={page.rows}
         initialThumbs={Object.fromEntries(thumbMap)}

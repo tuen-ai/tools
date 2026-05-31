@@ -2,25 +2,31 @@ import Link from "next/link";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listAdminEvents } from "@/lib/db/events";
+import { resolveLangServer } from "@/lib/i18n/server";
+import { ADMIN_DICT, type AdminDict } from "@/lib/i18n/admin-dict";
 
 export default async function AdminEventsPage() {
   const supabase = await createSupabaseServerClient();
-  const events = await listAdminEvents(supabase);
+  const [events, lang] = await Promise.all([
+    listAdminEvents(supabase),
+    resolveLangServer(),
+  ]);
+  const t = ADMIN_DICT[lang];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-serif text-2xl text-ink-900">Your events</h1>
+        <h1 className="font-serif text-2xl text-ink-900">{t.yourEvents}</h1>
         <Link
           href="/admin/new"
           className="rounded-xl bg-blush-500 px-4 py-2 text-white text-sm font-medium hover:bg-blush-600 transition"
         >
-          New event
+          {t.newEventCta}
         </Link>
       </div>
 
       {events.length === 0 ? (
-        <EmptyState />
+        <EmptyState t={t} />
       ) : (
         <ul className="grid sm:grid-cols-2 gap-4">
           {events.map((e) => (
@@ -33,7 +39,7 @@ export default async function AdminEventsPage() {
                   <h2 className="font-serif text-lg text-ink-900 truncate">
                     {e.couple_names}
                   </h2>
-                  <StatusPill enabled={e.upload_enabled} />
+                  <StatusPill enabled={e.upload_enabled} t={t} />
                 </div>
                 <p className="text-sm text-ink-500 truncate">/e/{e.slug}</p>
                 {e.event_date ? (
@@ -48,7 +54,7 @@ export default async function AdminEventsPage() {
   );
 }
 
-function StatusPill({ enabled }: { enabled: boolean }) {
+function StatusPill({ enabled, t }: { enabled: boolean; t: AdminDict }) {
   return (
     <span
       className={`inline-flex items-center text-[11px] px-2 py-0.5 rounded-full ${
@@ -57,28 +63,26 @@ function StatusPill({ enabled }: { enabled: boolean }) {
           : "bg-ink-500/10 text-ink-500"
       }`}
     >
-      {enabled ? "Open" : "Closed"}
+      {enabled ? t.statusOpen : t.statusClosed}
     </span>
   );
 }
 
-function EmptyState() {
+function EmptyState({ t }: { t: AdminDict }) {
   return (
     <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center">
       <div className="text-4xl mb-3" aria-hidden>
         💍
       </div>
       <h2 className="font-serif text-xl text-ink-900 mb-2">
-        No events yet
+        {t.eventsEmptyTitle}
       </h2>
-      <p className="text-ink-500 text-sm mb-6">
-        Create your first event to print a QR code and start collecting photos.
-      </p>
+      <p className="text-ink-500 text-sm mb-6">{t.eventsEmptyBody}</p>
       <Link
         href="/admin/new"
         className="inline-block rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium hover:bg-blush-600 transition"
       >
-        Create event
+        {t.eventsEmptyCta}
       </Link>
     </div>
   );

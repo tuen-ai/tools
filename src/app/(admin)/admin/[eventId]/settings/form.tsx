@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 
 import type { Database } from "@/types/database";
+import { ADMIN_DICT, lookupAdminError } from "@/lib/i18n/admin-dict";
+import type { Lang } from "@/lib/i18n";
 import { updateEventAction, type UpdateEventResult } from "./actions";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
@@ -17,11 +19,19 @@ function readPrimaryColor(theme: Record<string, unknown> | null): string {
     : DEFAULT_PRIMARY;
 }
 
-export function SettingsForm({ event }: { event: EventRow }) {
+export function SettingsForm({
+  lang,
+  event,
+}: {
+  lang: Lang;
+  event: EventRow;
+}) {
+  const t = ADMIN_DICT[lang];
   const [state, action, pending] = useActionState(updateEventAction, INITIAL);
   const initialColor = readPrimaryColor(event.theme);
   const [primaryColor, setPrimaryColor] = useState(initialColor);
   const isDefault = primaryColor.toLowerCase() === DEFAULT_PRIMARY.toLowerCase();
+  const errMessage = state.error ? lookupAdminError(t, state.error) : null;
 
   return (
     <form
@@ -31,11 +41,11 @@ export function SettingsForm({ event }: { event: EventRow }) {
       <input type="hidden" name="eventId" value={event.id} />
 
       <div className="rounded-xl bg-cream-100 px-4 py-3 text-sm text-ink-700">
-        Slug · <span className="font-mono">/e/{event.slug}</span>
+        {t.slugLabel} · <span className="font-mono">/e/{event.slug}</span>
       </div>
 
       <label className="block">
-        <span className="text-sm text-ink-700 font-medium">Couple’s names</span>
+        <span className="text-sm text-ink-700 font-medium">{t.formCoupleNames}</span>
         <input
           name="couple_names"
           type="text"
@@ -47,7 +57,7 @@ export function SettingsForm({ event }: { event: EventRow }) {
       </label>
 
       <label className="block">
-        <span className="text-sm text-ink-700 font-medium">Event date</span>
+        <span className="text-sm text-ink-700 font-medium">{t.formEventDate}</span>
         <input
           name="event_date"
           type="date"
@@ -57,7 +67,7 @@ export function SettingsForm({ event }: { event: EventRow }) {
       </label>
 
       <label className="block">
-        <span className="text-sm text-ink-700 font-medium">Welcome message</span>
+        <span className="text-sm text-ink-700 font-medium">{t.formWelcomeMessage}</span>
         <textarea
           name="welcome_message"
           maxLength={500}
@@ -69,7 +79,7 @@ export function SettingsForm({ event }: { event: EventRow }) {
 
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">
-          Max uploads per guest
+          {t.formMaxUploads}
         </span>
         <input
           name="max_uploads_per_guest"
@@ -90,39 +100,35 @@ export function SettingsForm({ event }: { event: EventRow }) {
         />
         <span>
           <span className="block text-sm font-medium text-ink-900">
-            Accept new uploads
+            {t.acceptUploads}
           </span>
           <span className="block text-xs text-ink-500 mt-0.5">
-            Turn off when you’ve collected enough photos. Existing photos stay
-            visible to you.
+            {t.acceptUploadsHint}
           </span>
         </span>
       </label>
 
       <div className="rounded-xl border border-cream-200 p-4">
         <div className="flex items-center justify-between gap-3 mb-2">
-          <span className="text-sm font-medium text-ink-900">Primary color</span>
+          <span className="text-sm font-medium text-ink-900">{t.primaryColor}</span>
           {!isDefault ? (
             <button
               type="button"
               onClick={() => setPrimaryColor(DEFAULT_PRIMARY)}
               className="text-[11px] text-ink-500 hover:text-ink-900 transition"
             >
-              Reset to default
+              {t.primaryColorReset}
             </button>
           ) : null}
         </div>
-        <p className="text-xs text-ink-500 mb-3">
-          Applied to the upload page header and primary button. Pick a
-          shade that matches your invitations.
-        </p>
+        <p className="text-xs text-ink-500 mb-3">{t.primaryColorHint}</p>
         <div className="flex items-center gap-3">
           <input
             type="color"
             value={primaryColor}
             onChange={(e) => setPrimaryColor(e.target.value)}
             className="h-10 w-14 rounded cursor-pointer border border-cream-200"
-            aria-label="Primary color"
+            aria-label={t.primaryColor}
           />
           <input
             type="text"
@@ -149,13 +155,13 @@ export function SettingsForm({ event }: { event: EventRow }) {
         />
       </div>
 
-      {state.error ? (
+      {errMessage ? (
         <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
-          {state.error}
+          {errMessage}
         </div>
       ) : state.saved && !pending ? (
         <div className="rounded-xl bg-sage-500/15 px-4 py-3 text-sm text-sage-600">
-          Saved.
+          {t.saved}
         </div>
       ) : null}
 
@@ -164,9 +170,8 @@ export function SettingsForm({ event }: { event: EventRow }) {
         disabled={pending}
         className="w-full rounded-xl bg-ink-900 px-4 py-3 text-white text-sm font-medium hover:bg-ink-700 disabled:opacity-60 transition"
       >
-        {pending ? "Saving…" : "Save changes"}
+        {pending ? t.savePending : t.saveCta}
       </button>
     </form>
   );
 }
-

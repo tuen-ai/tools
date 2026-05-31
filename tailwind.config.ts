@@ -26,8 +26,11 @@ const config: Config = {
         },
       },
       fontFamily: {
-        serif: ["var(--font-display)", "Georgia", "serif"],
-        sans:  ["var(--font-body)", "system-ui", "sans-serif"],
+        // CJK font listed alongside Inter so Chinese glyphs render natively
+        // without a flash of fallback. Order matters: Inter covers Latin
+        // first, Noto Sans TC handles CJK ranges.
+        serif: ["var(--font-display)", "var(--font-cjk)", "Georgia", "serif"],
+        sans:  ["var(--font-body)", "var(--font-cjk)", "system-ui", "sans-serif"],
       },
       boxShadow: {
         soft: "0 6px 24px -8px rgba(42, 38, 34, 0.12)",

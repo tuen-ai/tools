@@ -45,7 +45,7 @@ export async function createTableAction(
   } catch (err) {
     const msg = (err as Error).message;
     if (msg.includes("duplicate") || msg.includes("unique")) {
-      return { ok: false, error: "Already exists." };
+      return { ok: false, error: "err_table_exists" };
     }
     return { ok: false, error: msg };
   }

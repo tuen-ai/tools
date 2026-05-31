@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Noto_Sans_TC } from "next/font/google";
+
+import { resolveLangServer } from "@/lib/i18n/server";
 import "./globals.css";
 
 const body = Inter({
@@ -12,10 +14,17 @@ const display = Playfair_Display({
   variable: "--font-display",
   display: "swap",
 });
+const cjk = Noto_Sans_TC({
+  subsets: ["latin"],
+  variable: "--font-cjk",
+  display: "swap",
+  weight: ["400", "500", "700"],
+});
 
 export const metadata: Metadata = {
-  title: "Wedding photo sharing",
-  description: "Share your photos with the couple",
+  title: "婚禮相片分享 · Wedding photo sharing",
+  description:
+    "將相片直接送給新人 · Share your photos with the couple",
 };
 
 export const viewport: Viewport = {
@@ -25,13 +34,21 @@ export const viewport: Viewport = {
   themeColor: "#FBF8F3",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const lang = await resolveLangServer();
+  // Match the HTML lang attribute to the resolved language so screen readers
+  // and CJK font fallbacks pick the right glyphs.
+  const htmlLang = lang === "zh-Hant" ? "zh-Hant" : "en";
+
   return (
-    <html lang="en" className={`${body.variable} ${display.variable}`}>
+    <html
+      lang={htmlLang}
+      className={`${body.variable} ${display.variable} ${cjk.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

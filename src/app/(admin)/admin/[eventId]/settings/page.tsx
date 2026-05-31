@@ -5,6 +5,8 @@ import { requireEventAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { signOriginalUrl } from "@/lib/db/media";
+import { resolveLangServer } from "@/lib/i18n/server";
+import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { SettingsForm } from "./form";
 import { CleanupPanel } from "./cleanup-panel";
 import { CoverPanel } from "./cover-panel";
@@ -18,8 +20,12 @@ export default async function EventSettingsPage({ params }: Props) {
   await requireEventAdmin(eventId);
 
   const admin = createAdminClient();
-  const event = await getEventById(admin, eventId);
+  const [event, lang] = await Promise.all([
+    getEventById(admin, eventId),
+    resolveLangServer(),
+  ]);
   if (!event) notFound();
+  const t = ADMIN_DICT[lang];
 
   let coverUrl: string | null = null;
   if (event.cover_image_path) {
@@ -36,17 +42,15 @@ export default async function EventSettingsPage({ params }: Props) {
         href={`/admin/${eventId}`}
         className="inline-block text-sm text-ink-500 hover:text-ink-900 mb-4"
       >
-        ← Back to photos
+        {t.backToPhotos}
       </Link>
       <header className="mb-6">
-        <h1 className="font-serif text-2xl text-ink-900">Settings</h1>
-        <p className="text-sm text-ink-500 mt-1">
-          The URL slug can’t be changed once an event has been created.
-        </p>
+        <h1 className="font-serif text-2xl text-ink-900">{t.settingsHeading}</h1>
+        <p className="text-sm text-ink-500 mt-1">{t.settingsSubtitle}</p>
       </header>
-      <SettingsForm event={event} />
-      <CoverPanel eventId={event.id} coverUrl={coverUrl} />
-      <CleanupPanel eventId={event.id} />
+      <SettingsForm lang={lang} event={event} />
+      <CoverPanel lang={lang} eventId={event.id} coverUrl={coverUrl} />
+      <CleanupPanel lang={lang} eventId={event.id} />
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DICT, type Lang } from "@/lib/i18n";
+
 export interface Slide {
   id: string;
   url: string;
@@ -14,6 +16,7 @@ interface SlideResponse {
 }
 
 interface Props {
+  lang: Lang;
   eventSlug: string;
   coupleNames: string;
   initialSlides: Slide[];
@@ -27,10 +30,12 @@ const NEW_TOAST_MS = 4500;      // "New from a guest" banner duration
 const IDLE_CURSOR_MS = 3000;    // hide cursor after this idle time
 
 export function SlideshowClient({
+  lang,
   eventSlug,
   coupleNames,
   initialSlides,
 }: Props) {
+  const t = DICT[lang];
   const [slides, setSlides] = useState<Slide[]>(initialSlides);
   const [index, setIndex] = useState(0);
   const [newCount, setNewCount] = useState(0);
@@ -127,13 +132,13 @@ export function SlideshowClient({
       <div className="fixed inset-0 bg-ink-900 text-white flex items-center justify-center">
         <div className="text-center">
           <p className="uppercase tracking-[0.4em] text-xs text-blush-400 mb-4">
-            Wedding photo sharing
+            {t.slideshowEyebrow}
           </p>
           <h1 className="font-serif text-6xl mb-6 animate-[fadeup_600ms_ease-out]">
             {coupleNames}
           </h1>
           <p className="text-ink-500 animate-[fadeup_800ms_ease-out]">
-            Waiting for the first photo from your guests…
+            {t.slideshowWaiting}
           </p>
         </div>
       </div>
@@ -161,13 +166,13 @@ export function SlideshowClient({
       <div className="absolute top-0 left-0 right-0 p-8 flex items-center justify-between text-white/90 z-10 pointer-events-none">
         <div>
           <p className="uppercase tracking-[0.3em] text-[10px] text-blush-400 mb-1">
-            Wedding photo sharing
+            {t.slideshowEyebrow}
           </p>
           <h1 className="font-serif text-3xl drop-shadow-lg">{coupleNames}</h1>
         </div>
         <div className="text-right text-xs text-white/60">
           <span>
-            {(index % slides.length) + 1} / {slides.length}
+            {t.slideshowCounter((index % slides.length) + 1, slides.length)}
           </span>
         </div>
       </div>
@@ -176,7 +181,7 @@ export function SlideshowClient({
       {newCount > 0 ? (
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 animate-[slidedown_500ms_ease-out]">
           <div className="rounded-full bg-blush-500/90 text-white px-5 py-2 text-sm font-medium shadow-soft backdrop-blur">
-            ✨ {newCount} new photo{newCount === 1 ? "" : "s"}
+            {t.slideshowNewToast(newCount)}
           </div>
         </div>
       ) : null}

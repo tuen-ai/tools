@@ -36,10 +36,11 @@ export async function createEventAction(
     welcome_message: formData.get("welcome_message") || undefined,
   });
   if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues.map((i) => i.message).join(" · "),
-    };
+    // Slug regex is the only validation likely to fail in production —
+    // surface it with a translatable code; other Zod issues are dev bugs.
+    const slugIssue = parsed.error.issues.find((i) => i.path[0] === "slug");
+    if (slugIssue) return { ok: false, error: "err_slug_format" };
+    return { ok: false, error: "err_invalid_request" };
   }
 
   const { user } = await requireSession();
@@ -58,7 +59,7 @@ export async function createEventAction(
   } catch (err) {
     const msg = (err as Error).message;
     if (msg.includes("events_slug_key") || msg.includes("duplicate")) {
-      return { ok: false, error: "That URL is already taken — try another." };
+      return { ok: false, error: "err_slug_taken" };
     }
     return { ok: false, error: msg };
   }

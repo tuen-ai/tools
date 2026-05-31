@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventBySlug } from "@/lib/db/events";
 import { signOriginalUrl } from "@/lib/db/media";
-import { DICT, resolveLang } from "@/lib/i18n";
+import { DICT } from "@/lib/i18n";
+import { resolveLangServer } from "@/lib/i18n/server";
 import { LanguageSwitch } from "@/lib/i18n/language-switch";
 import { UploadClient } from "./upload-client";
 import { ClosedScreen } from "./closed";
@@ -19,18 +19,11 @@ export async function generateMetadata({
   params,
   searchParams,
 }: Props): Promise<Metadata> {
-  const [{ slug }, sp, hdrs] = await Promise.all([
-    params,
-    searchParams,
-    headers(),
-  ]);
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const event = await getEventBySlug(createAdminClient(), slug);
   if (!event) return { title: "Event not found" };
 
-  const lang = resolveLang({
-    searchParamLang: sp.lang,
-    acceptLanguage: hdrs.get("accept-language"),
-  });
+  const lang = await resolveLangServer(sp.lang);
   const t = DICT[lang];
 
   const title = `${event.couple_names} — ${t.eyebrow}`;
@@ -60,20 +53,13 @@ function readPrimaryColor(theme: Record<string, unknown> | null): string | null 
 }
 
 export default async function GuestEventPage({ params, searchParams }: Props) {
-  const [{ slug }, sp, hdrs] = await Promise.all([
-    params,
-    searchParams,
-    headers(),
-  ]);
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const admin = createAdminClient();
   const event = await getEventBySlug(admin, slug);
 
   if (!event) notFound();
 
-  const lang = resolveLang({
-    searchParamLang: sp.lang,
-    acceptLanguage: hdrs.get("accept-language"),
-  });
+  const lang = await resolveLangServer(sp.lang);
   const t = DICT[lang];
   const primaryColor = readPrimaryColor(event.theme);
   const tableLabel = sp.table?.trim() || null;

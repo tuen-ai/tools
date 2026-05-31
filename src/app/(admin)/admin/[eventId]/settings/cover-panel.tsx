@@ -2,6 +2,8 @@
 
 import { useActionState, useRef } from "react";
 
+import { ADMIN_DICT, lookupAdminError } from "@/lib/i18n/admin-dict";
+import type { Lang } from "@/lib/i18n";
 import {
   uploadCoverAction,
   removeCoverAction,
@@ -11,12 +13,13 @@ import {
 const INITIAL: CoverActionResult = { ok: true };
 
 interface Props {
+  lang: Lang;
   eventId: string;
-  /** Signed URL of the current cover (if any), good for ~30 min. */
   coverUrl: string | null;
 }
 
-export function CoverPanel({ eventId, coverUrl }: Props) {
+export function CoverPanel({ lang, eventId, coverUrl }: Props) {
+  const t = ADMIN_DICT[lang];
   const [uploadState, uploadAction, uploadPending] = useActionState(
     uploadCoverAction,
     INITIAL,
@@ -27,15 +30,13 @@ export function CoverPanel({ eventId, coverUrl }: Props) {
   );
   const formRef = useRef<HTMLFormElement>(null);
   const state = uploadPending ? uploadState : (removeState.error ? removeState : uploadState);
+  const errMessage = state.error ? lookupAdminError(t, state.error) : null;
 
   return (
     <div className="bg-white rounded-3xl shadow-soft p-7 mt-6 space-y-4">
       <div>
-        <h2 className="font-serif text-lg text-ink-900">Cover image</h2>
-        <p className="text-sm text-ink-500 mt-1">
-          A hero image at the top of the upload page. Best in landscape
-          (16:9). Under 25 MB. JPEG, PNG, WebP, or HEIC.
-        </p>
+        <h2 className="font-serif text-lg text-ink-900">{t.coverHeading}</h2>
+        <p className="text-sm text-ink-500 mt-1">{t.coverHint}</p>
       </div>
 
       {coverUrl ? (
@@ -45,7 +46,7 @@ export function CoverPanel({ eventId, coverUrl }: Props) {
         </div>
       ) : (
         <div className="rounded-2xl border-2 border-dashed border-cream-200 h-40 flex items-center justify-center text-ink-500 text-sm">
-          No cover image yet
+          {t.coverEmpty}
         </div>
       )}
 
@@ -68,19 +69,19 @@ export function CoverPanel({ eventId, coverUrl }: Props) {
             disabled={removePending}
             className="rounded-xl border border-blush-400 text-blush-600 px-4 py-2 text-sm hover:bg-blush-400/10 disabled:opacity-60 transition"
           >
-            {removePending ? "Removing…" : "Remove"}
+            {removePending ? t.coverRemovePending : t.coverRemove}
           </button>
         ) : null}
       </form>
 
       {uploadPending ? (
         <div className="rounded-xl bg-cream-100 px-4 py-3 text-sm text-ink-700">
-          Uploading…
+          {t.coverUploading}
         </div>
       ) : null}
-      {state.error ? (
+      {errMessage ? (
         <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
-          {state.error}
+          {errMessage}
         </div>
       ) : null}
     </div>

@@ -29,6 +29,10 @@ export interface Dict {
   closedTitle: string;
   closedBody: string;
   tableBadge: (label: string) => string;
+  slideshowEyebrow: string;
+  slideshowWaiting: string;
+  slideshowCounter: (current: number, total: number) => string;
+  slideshowNewToast: (n: number) => string;
   errUnsupported: (name: string) => string;
   errOverSize: (name: string) => string;
   errVideoTooLong: (name: string) => string;
@@ -62,6 +66,11 @@ export const DICT: Record<Lang, Dict> = {
     closedBody:
       "Thank you for being part of this day. The couple has closed photo uploads — they have everything they need.",
     tableBadge: (label) => `Table · ${label}`,
+    slideshowEyebrow: "Wedding photo sharing",
+    slideshowWaiting: "Waiting for the first photo from your guests…",
+    slideshowCounter: (current, total) => `${current} / ${total}`,
+    slideshowNewToast: (n) =>
+      `✨ ${n} new photo${n === 1 ? "" : "s"}`,
     errUnsupported: (name) => `${name}: unsupported format`,
     errOverSize: (name) => `${name}: file too large`,
     errVideoTooLong: (name) => `${name}: video over 30 seconds`,
@@ -90,6 +99,10 @@ export const DICT: Record<Lang, Dict> = {
     closedBody:
       "謝謝您參與這個美好的日子。新人已經收到足夠的相片,不再開放上傳。",
     tableBadge: (label) => `座位 · ${label}`,
+    slideshowEyebrow: "婚禮相片分享",
+    slideshowWaiting: "等待第一張賓客相片…",
+    slideshowCounter: (current, total) => `${current} / ${total}`,
+    slideshowNewToast: (n) => `✨ ${n} 張新相片`,
     errUnsupported: (name) => `${name}:不支援的格式`,
     errOverSize: (name) => `${name}:檔案太大`,
     errVideoTooLong: (name) => `${name}:短片超過 30 秒`,

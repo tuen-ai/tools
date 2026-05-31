@@ -2,13 +2,18 @@
 
 import { useActionState, useState } from "react";
 import { signInAction, signUpAction, type AuthResult } from "@/lib/auth/actions";
+import { ADMIN_DICT, lookupAdminError } from "@/lib/i18n/admin-dict";
+import type { Lang } from "@/lib/i18n";
 
 const INITIAL: AuthResult = { ok: true };
 
-export function LoginForm() {
+export function LoginForm({ lang }: { lang: Lang }) {
+  const t = ADMIN_DICT[lang];
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const action = mode === "signin" ? signInAction : signUpAction;
   const [state, formAction, pending] = useActionState(action, INITIAL);
+
+  const message = state.error ? lookupAdminError(t, state.error) : null;
 
   return (
     <form
@@ -16,7 +21,7 @@ export function LoginForm() {
       className="bg-white rounded-3xl shadow-soft p-7 space-y-4"
     >
       <label className="block">
-        <span className="text-sm text-ink-700 font-medium">Email</span>
+        <span className="text-sm text-ink-700 font-medium">{t.loginEmail}</span>
         <input
           name="email"
           type="email"
@@ -27,7 +32,7 @@ export function LoginForm() {
       </label>
 
       <label className="block">
-        <span className="text-sm text-ink-700 font-medium">Password</span>
+        <span className="text-sm text-ink-700 font-medium">{t.loginPassword}</span>
         <input
           name="password"
           type="password"
@@ -43,10 +48,10 @@ export function LoginForm() {
       {mode === "signup" ? (
         <label className="block">
           <span className="text-sm text-ink-700 font-medium">
-            Invite code
+            {t.loginInviteCode}
           </span>
           <span className="block text-[11px] text-ink-500">
-            Get this from the couple or an existing admin.
+            {t.loginInviteCodeHint}
           </span>
           <input
             name="inviteCode"
@@ -58,7 +63,7 @@ export function LoginForm() {
         </label>
       ) : null}
 
-      {state.error ? (
+      {message ? (
         <div
           className={`rounded-xl px-4 py-3 text-sm ${
             state.ok
@@ -66,7 +71,7 @@ export function LoginForm() {
               : "bg-blush-400/15 text-blush-600"
           }`}
         >
-          {state.error}
+          {message}
         </div>
       ) : null}
 
@@ -77,11 +82,11 @@ export function LoginForm() {
       >
         {pending
           ? mode === "signin"
-            ? "Signing in…"
-            : "Creating account…"
+            ? t.signInPending
+            : t.signUpPending
           : mode === "signin"
-            ? "Sign in"
-            : "Create account"}
+            ? t.signInCta
+            : t.signUpCta}
       </button>
 
       <button
@@ -89,9 +94,7 @@ export function LoginForm() {
         onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
         className="block w-full text-center text-sm text-ink-500 hover:text-ink-700"
       >
-        {mode === "signin"
-          ? "Need an account? Create one"
-          : "Already have an account? Sign in"}
+        {mode === "signin" ? t.toggleToSignUp : t.toggleToSignIn}
       </button>
     </form>
   );

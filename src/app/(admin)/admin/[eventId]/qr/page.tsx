@@ -7,6 +7,8 @@ import { requireEventAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { env } from "@/lib/env";
+import { resolveLangServer } from "@/lib/i18n/server";
+import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { PrintButton } from "./print-button";
 
 interface Props {
@@ -25,8 +27,12 @@ export default async function QRPage({ params }: Props) {
   const { eventId } = await params;
   await requireEventAdmin(eventId);
 
-  const event = await getEventById(createAdminClient(), eventId);
+  const [event, lang] = await Promise.all([
+    getEventById(createAdminClient(), eventId),
+    resolveLangServer(),
+  ]);
   if (!event) notFound();
+  const t = ADMIN_DICT[lang];
 
   const baseUrl = await resolveBaseUrl();
   const url = `${baseUrl}/e/${event.slug}`;
@@ -44,21 +50,19 @@ export default async function QRPage({ params }: Props) {
           href={`/admin/${eventId}`}
           className="text-sm text-ink-500 hover:text-ink-900"
         >
-          ← Back to photos
+          {t.backToPhotos}
         </Link>
-        <PrintButton />
+        <PrintButton lang={lang} />
       </div>
 
       <div className="bg-white rounded-3xl shadow-soft p-8 text-center print:shadow-none print:rounded-none print:p-12">
         <p className="uppercase tracking-[0.25em] text-xs text-blush-600 mb-3">
-          Wedding photo sharing
+          {t.brand}
         </p>
         <h1 className="font-serif text-2xl text-ink-900 mb-2">
           {event.couple_names}
         </h1>
-        <p className="text-sm text-ink-500 mb-6">
-          Scan the code to share your photos
-        </p>
+        <p className="text-sm text-ink-500 mb-6">{t.qrScanInstruction}</p>
         <div
           className="mx-auto inline-block"
           // eslint-disable-next-line react/no-danger
@@ -69,4 +73,3 @@ export default async function QRPage({ params }: Props) {
     </div>
   );
 }
-

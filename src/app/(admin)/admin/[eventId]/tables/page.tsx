@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { listTables } from "@/lib/db/tables";
 import { env } from "@/lib/env";
+import { resolveLangServer } from "@/lib/i18n/server";
+import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { CreateTableForm } from "./create-form";
 import { DeleteTableButton } from "./delete-button";
 
@@ -28,8 +30,12 @@ export default async function TablesPage({ params }: Props) {
   await requireEventAdmin(eventId);
 
   const admin = createAdminClient();
-  const event = await getEventById(admin, eventId);
+  const [event, lang] = await Promise.all([
+    getEventById(admin, eventId),
+    resolveLangServer(),
+  ]);
   if (!event) notFound();
+  const t = ADMIN_DICT[lang];
 
   const tables = await listTables(admin, eventId);
   const baseUrl = await resolveBaseUrl();
@@ -56,26 +62,21 @@ export default async function TablesPage({ params }: Props) {
         href={`/admin/${eventId}`}
         className="inline-block text-sm text-ink-500 hover:text-ink-900 mb-4 print:hidden"
       >
-        ← Back to photos
+        {t.backToPhotos}
       </Link>
       <header className="mb-6 print:hidden">
-        <h1 className="font-serif text-2xl text-ink-900">Per-table QR codes</h1>
-        <p className="text-sm text-ink-500 mt-1">
-          Print one QR per table. Photos uploaded from each table get
-          tagged automatically — you can filter the gallery by table later.
-        </p>
+        <h1 className="font-serif text-2xl text-ink-900">{t.tablesHeading}</h1>
+        <p className="text-sm text-ink-500 mt-1">{t.tablesSubtitle}</p>
       </header>
 
       <div className="print:hidden">
-        <CreateTableForm eventId={eventId} />
+        <CreateTableForm lang={lang} eventId={eventId} />
       </div>
 
       {tables.length === 0 ? (
         <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center mt-6 print:hidden">
           <div className="text-4xl mb-3" aria-hidden>🪑</div>
-          <p className="text-ink-500 text-sm">
-            No tables yet. Add table labels (e.g. <span className="font-mono">1</span>, <span className="font-mono">2</span>, <span className="font-mono">A</span>, <span className="font-mono">Garden</span>) and a printable QR will appear for each.
-          </p>
+          <p className="text-ink-500 text-sm">{t.tablesEmpty}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 print:grid-cols-3">
@@ -85,7 +86,7 @@ export default async function TablesPage({ params }: Props) {
               className="bg-white rounded-2xl border border-cream-200 p-4 text-center break-inside-avoid print:border-ink-500"
             >
               <p className="uppercase tracking-[0.2em] text-[10px] text-blush-600 mb-1">
-                Table
+                {t.tableLabel}
               </p>
               <h2 className="font-serif text-2xl text-ink-900 mb-3 break-words">
                 {table.label}
@@ -97,7 +98,12 @@ export default async function TablesPage({ params }: Props) {
               />
               <p className="font-mono text-[9px] text-ink-500 break-all">{url}</p>
               <div className="mt-3 print:hidden">
-                <DeleteTableButton eventId={eventId} tableId={table.id} label={table.label} />
+                <DeleteTableButton
+                  lang={lang}
+                  eventId={eventId}
+                  tableId={table.id}
+                  label={table.label}
+                />
               </div>
             </div>
           ))}
