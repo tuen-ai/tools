@@ -5,23 +5,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { insertMedia } from "@/lib/db/media";
 import {
   ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE_BYTES,
+  MAX_VIDEO_SIZE_BYTES,
   STORAGE_BUCKET,
+  maxSizeFor,
 } from "@/lib/upload/constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BodySchema = z.object({
-  mediaId: z.string().uuid(),
-  eventId: z.string().uuid(),
-  guestId: z.string().uuid(),
-  storagePath: z.string().min(1),
-  mime: z.enum(ALLOWED_MIME_TYPES),
-  size: z.number().int().positive().max(MAX_FILE_SIZE_BYTES),
-  width: z.number().int().positive().optional(),
-  height: z.number().int().positive().optional(),
-});
+const BodySchema = z
+  .object({
+    mediaId: z.string().uuid(),
+    eventId: z.string().uuid(),
+    guestId: z.string().uuid(),
+    tableId: z.string().uuid().optional().nullable(),
+    storagePath: z.string().min(1),
+    mime: z.enum(ALLOWED_MIME_TYPES),
+    size: z.number().int().positive().max(MAX_VIDEO_SIZE_BYTES),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional(),
+  })
+  .refine((b) => b.size <= maxSizeFor(b.mime), {
+    message: "file_too_large_for_mime",
+  });
 
 export async function POST(request: Request) {
   let parsed;
@@ -79,6 +85,7 @@ export async function POST(request: Request) {
       id: parsed.mediaId,
       event_id: parsed.eventId,
       guest_id: parsed.guestId,
+      table_id: parsed.tableId ?? null,
       storage_path: parsed.storagePath,
       mime_type: parsed.mime,
       size_bytes: parsed.size,

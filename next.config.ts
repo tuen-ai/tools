@@ -12,6 +12,11 @@ const config: NextConfig = {
       },
     ],
   },
+  experimental: {
+    // Admin cover-image upload uses a server action — raise the body
+    // limit beyond the 1 MB default so 4-6 MB JPEGs work.
+    serverActions: { bodySizeLimit: "8mb" },
+  },
 };
 
 export default config;

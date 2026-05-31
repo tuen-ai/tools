@@ -20,6 +20,10 @@ couple sees them in a private admin gallery.
       guards, upload retry, OG meta, scheduled hard-delete cron
 - [x] Phase 6: i18n (en / 繁中), custom theme color, guest messages,
       ZIP album export
+- [x] Phase 7: live slideshow (`/e/[slug]/show`), video upload (30s cap),
+      cover image, animations + confetti
+- [x] Phase 8 (in progress): per-table QR codes (`/e/[slug]?table=X`),
+      tables admin (`/admin/[eventId]/tables`)
 
 ## Running locally
 

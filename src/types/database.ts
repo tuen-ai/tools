@@ -62,6 +62,7 @@ export type Database = {
           id: string;
           event_id: string;
           guest_id: string | null;
+          table_id: string | null;
           storage_path: string;
           mime_type: string;
           size_bytes: number;
@@ -76,6 +77,7 @@ export type Database = {
           id?: string;
           event_id: string;
           guest_id?: string | null;
+          table_id?: string | null;
           storage_path: string;
           mime_type: string;
           size_bytes: number;
@@ -85,6 +87,21 @@ export type Database = {
           status?: MediaStatus;
         };
         Update: Partial<Database["public"]["Tables"]["media"]["Insert"]>;
+        Relationships: [];
+      };
+      tables: {
+        Row: {
+          id: string;
+          event_id: string;
+          label: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          label: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tables"]["Insert"]>;
         Relationships: [];
       };
       messages: {
@@ -153,6 +170,14 @@ export type Database = {
           theme: Record<string, unknown>;
           upload_enabled: boolean;
           max_uploads_per_guest: number;
+        }>;
+      };
+      get_table_by_slug_label: {
+        Args: { p_slug: string; p_label: string };
+        Returns: Array<{
+          id: string;
+          event_id: string;
+          label: string;
         }>;
       };
     };

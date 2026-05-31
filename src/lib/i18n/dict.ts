@@ -28,8 +28,10 @@ export interface Dict {
   addMore: string;
   closedTitle: string;
   closedBody: string;
+  tableBadge: (label: string) => string;
   errUnsupported: (name: string) => string;
   errOverSize: (name: string) => string;
+  errVideoTooLong: (name: string) => string;
   errTruncated: (max: number) => string;
 }
 
@@ -41,9 +43,9 @@ export const DICT: Record<Lang, Dict> = {
     yourNamePlaceholder: "e.g. Aunt Linda",
     messageLabel: "Leave a message",
     messagePlaceholder: "A short note for the couple…",
-    choosePhotos: "Choose photos to share",
+    choosePhotos: "Choose photos or short videos",
     chooseHelp: (max) =>
-      `JPEG, PNG, WebP, or HEIC · up to ${max} at a time`,
+      `Photos or videos (under 30s) · up to ${max} at a time`,
     changePhotos: "Change photos",
     send: (count) =>
       `Send ${count} photo${count === 1 ? "" : "s"}`,
@@ -59,8 +61,10 @@ export const DICT: Record<Lang, Dict> = {
     closedTitle: "Photo sharing is closed",
     closedBody:
       "Thank you for being part of this day. The couple has closed photo uploads — they have everything they need.",
+    tableBadge: (label) => `Table · ${label}`,
     errUnsupported: (name) => `${name}: unsupported format`,
-    errOverSize: (name) => `${name}: over 25 MB`,
+    errOverSize: (name) => `${name}: file too large`,
+    errVideoTooLong: (name) => `${name}: video over 30 seconds`,
     errTruncated: (max) => `Only the first ${max} photos were added.`,
   },
   "zh-Hant": {
@@ -70,9 +74,9 @@ export const DICT: Record<Lang, Dict> = {
     yourNamePlaceholder: "例如:阿姨",
     messageLabel: "留言給新人",
     messagePlaceholder: "寫幾句祝福的話…",
-    choosePhotos: "選擇相片分享",
+    choosePhotos: "選擇相片或短片",
     chooseHelp: (max) =>
-      `JPEG、PNG、WebP 或 HEIC · 每次最多 ${max} 張`,
+      `相片或短片(30 秒以內) · 每次最多 ${max} 個`,
     changePhotos: "更換相片",
     send: (count) => `傳送 ${count} 張相片`,
     sending: (done, total) => `傳送中… ${done}/${total}`,
@@ -85,8 +89,10 @@ export const DICT: Record<Lang, Dict> = {
     closedTitle: "相片分享已關閉",
     closedBody:
       "謝謝您參與這個美好的日子。新人已經收到足夠的相片,不再開放上傳。",
+    tableBadge: (label) => `座位 · ${label}`,
     errUnsupported: (name) => `${name}:不支援的格式`,
-    errOverSize: (name) => `${name}:超過 25 MB`,
-    errTruncated: (max) => `只加入了前 ${max} 張。`,
+    errOverSize: (name) => `${name}:檔案太大`,
+    errVideoTooLong: (name) => `${name}:短片超過 30 秒`,
+    errTruncated: (max) => `只加入了前 ${max} 個。`,
   },
 };

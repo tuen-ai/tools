@@ -46,7 +46,15 @@ export default async function EventDashboardPage({ params }: Props) {
             {event.couple_names}
           </h1>
         </div>
-        <nav className="flex items-center gap-2 text-sm">
+        <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <Link
+            href={`/e/${event.slug}/show`}
+            target="_blank"
+            className="rounded-lg bg-ink-900 text-white px-3 py-2 hover:bg-ink-700 transition"
+            title="Open slideshow in a new tab — mirror to your venue projector"
+          >
+            ▶ Slideshow
+          </Link>
           <a
             href={`/api/admin/events/${eventId}/export`}
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
@@ -59,6 +67,12 @@ export default async function EventDashboardPage({ params }: Props) {
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
           >
             QR
+          </Link>
+          <Link
+            href={`/admin/${eventId}/tables`}
+            className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
+          >
+            Tables
           </Link>
           <Link
             href={`/admin/${eventId}/settings`}

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, MediaStatus } from "@/types/database";
 
-import { STORAGE_BUCKET } from "@/lib/upload/constants";
+import { STORAGE_BUCKET, isVideoMime } from "@/lib/upload/constants";
 
 type MediaRow = Database["public"]["Tables"]["media"]["Row"];
 
@@ -83,12 +83,13 @@ export interface SignedThumb {
 }
 
 /**
- * Batch-mint signed transform URLs for a page of media. The transform is
- * applied by Supabase's image renderer; we don't precompute thumbnails.
+ * Batch-mint signed URLs for a page of media. For images, applies a
+ * Supabase image transform (resize + quality). For videos, returns the
+ * original signed URL — the caller renders a <video> tag.
  */
 export async function signThumbnailUrls(
   admin: SupabaseClient<Database>,
-  rows: Pick<MediaRow, "id" | "storage_path">[],
+  rows: Pick<MediaRow, "id" | "storage_path" | "mime_type">[],
   options: {
     width?: number;
     height?: number;
@@ -99,16 +100,20 @@ export async function signThumbnailUrls(
   const expiresIn = options.expiresInSec ?? 300; // 5 minutes
   return Promise.all(
     rows.map(async (row) => {
+      const isVid = isVideoMime(row.mime_type);
+      const opts = isVid
+        ? {}
+        : {
+            transform: {
+              width: options.width ?? 400,
+              height: options.height ?? 400,
+              resize: "cover" as const,
+              quality: options.quality ?? 70,
+            },
+          };
       const { data, error } = await admin.storage
         .from(STORAGE_BUCKET)
-        .createSignedUrl(row.storage_path, expiresIn, {
-          transform: {
-            width: options.width ?? 400,
-            height: options.height ?? 400,
-            resize: "cover",
-            quality: options.quality ?? 70,
-          },
-        });
+        .createSignedUrl(row.storage_path, expiresIn, opts);
       if (error || !data) {
         throw new Error(`Signed URL failed for ${row.id}: ${error?.message}`);
       }

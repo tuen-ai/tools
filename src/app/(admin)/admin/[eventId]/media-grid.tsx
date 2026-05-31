@@ -249,8 +249,10 @@ function MediaTile({
     });
   }
 
+  const isVideo = row.mime_type.startsWith("video/");
+
   return (
-    <div className="relative group">
+    <div className="relative group animate-[fadeup_400ms_ease-out]">
       <button
         type="button"
         onClick={onOpen}
@@ -258,7 +260,7 @@ function MediaTile({
           row.status === "hidden" ? "opacity-40" : ""
         } ${isFresh ? "ring-2 ring-blush-500 ring-offset-2 ring-offset-cream-50" : ""}`}
       >
-        {thumb ? (
+        {thumb && !isVideo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thumb}
@@ -267,34 +269,57 @@ function MediaTile({
             className="w-full h-full object-cover"
           />
         ) : null}
+        {thumb && isVideo ? (
+          <video
+            src={thumb}
+            muted
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover"
+          />
+        ) : null}
       </button>
 
+      {isVideo ? (
+        <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5 pointer-events-none">
+          ▶ Video
+        </span>
+      ) : null}
       {row.status === "hidden" ? (
         <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5">
           Hidden
         </span>
       ) : null}
       {isFresh ? (
-        <span className="absolute top-2 right-2 text-[10px] uppercase tracking-wider bg-blush-500 text-white rounded px-1.5 py-0.5">
+        <span className="absolute top-2 right-2 text-[10px] uppercase tracking-wider bg-blush-500 text-white rounded px-1.5 py-0.5 animate-[pop_400ms_ease-out]">
           New
         </span>
       ) : null}
 
       {isActive ? (
         <div
-          className="fixed inset-0 z-50 bg-ink-900/70 flex items-center justify-center p-5"
+          className="fixed inset-0 z-50 bg-ink-900/70 flex items-center justify-center p-5 animate-[fadein_200ms_ease-out]"
           onClick={onClose}
         >
           <div
-            className="bg-white rounded-3xl shadow-soft p-4 max-w-md w-full"
+            className="bg-white rounded-3xl shadow-soft p-4 max-w-md w-full animate-[pop_300ms_ease-out]"
             onClick={(e) => e.stopPropagation()}
           >
-            {thumb ? (
+            {thumb && !isVideo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={thumb}
                 alt=""
                 className="w-full rounded-2xl bg-cream-100"
+              />
+            ) : null}
+            {thumb && isVideo ? (
+              <video
+                src={thumb}
+                controls
+                autoPlay
+                playsInline
+                className="w-full rounded-2xl bg-black aspect-video"
               />
             ) : null}
             <div className="mt-4 grid grid-cols-3 gap-2">

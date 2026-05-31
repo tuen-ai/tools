@@ -9,9 +9,10 @@ import { insertMessage } from "@/lib/db/messages";
 import { takeToken, getClientIp } from "@/lib/rate-limit";
 import {
   ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE_BYTES,
   MAX_FILES_PER_REQUEST,
+  MAX_VIDEO_SIZE_BYTES,
   STORAGE_BUCKET,
+  maxSizeFor,
   storagePathFor,
   type AllowedMime,
 } from "@/lib/upload/constants";
@@ -19,16 +20,22 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const FileSchema = z.object({
-  mime: z.enum(ALLOWED_MIME_TYPES),
-  size: z.number().int().positive().max(MAX_FILE_SIZE_BYTES),
-});
+// Per-file validation: images and videos have different size caps.
+const FileSchema = z
+  .object({
+    mime: z.enum(ALLOWED_MIME_TYPES),
+    size: z.number().int().positive().max(MAX_VIDEO_SIZE_BYTES),
+  })
+  .refine((f) => f.size <= maxSizeFor(f.mime), {
+    message: "file_too_large_for_mime",
+  });
 
 const BodySchema = z.object({
   eventSlug: z.string().min(1).max(64),
   clientFingerprint: z.string().uuid(),
   displayName: z.string().trim().min(1).max(64).optional().nullable(),
   message: z.string().trim().min(1).max(500).optional().nullable(),
+  tableLabel: z.string().trim().min(1).max(64).optional().nullable(),
   files: z.array(FileSchema).min(1).max(MAX_FILES_PER_REQUEST),
 });
 
@@ -77,6 +84,17 @@ export async function POST(request: Request) {
     clientFingerprint: parsed.clientFingerprint,
     displayName: parsed.displayName ?? null,
   });
+
+  // Resolve optional table label → table_id. Unknown labels are ignored
+  // rather than erroring — guests scanning a stale QR shouldn't lose photos.
+  let tableId: string | null = null;
+  if (parsed.tableLabel) {
+    const { data: tbl } = await admin.rpc("get_table_by_slug_label", {
+      p_slug: parsed.eventSlug,
+      p_label: parsed.tableLabel,
+    });
+    tableId = tbl?.[0]?.id ?? null;
+  }
 
   // Optional message — insert before quota check so even if the guest is
   // at their photo limit the couple still receives their note.
@@ -130,6 +148,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     eventId: event.id,
     guestId: guest.id,
+    tableId,
     items,
   });
 }

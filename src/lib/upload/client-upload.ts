@@ -1,4 +1,4 @@
-import type { AllowedMime } from "@/lib/upload/constants";
+import { isVideoMime, type AllowedMime } from "@/lib/upload/constants";
 
 export type UploadItemStatus = "pending" | "uploading" | "done" | "failed";
 
@@ -14,6 +14,7 @@ export interface UploadItem {
 interface SignResponse {
   eventId: string;
   guestId: string;
+  tableId: string | null;
   items: Array<{
     mediaId: string;
     storagePath: string;
@@ -100,11 +101,34 @@ async function readImageDimensions(
   }
 }
 
+/** Reads <video> metadata to get dimensions. */
+async function readVideoDimensions(
+  file: File,
+): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    v.onloadedmetadata = () => {
+      const dims = { width: v.videoWidth, height: v.videoHeight };
+      URL.revokeObjectURL(url);
+      resolve(dims.width > 0 ? dims : null);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    v.src = url;
+  });
+}
+
 interface UploadOptions {
   eventSlug: string;
   clientFingerprint: string;
   displayName: string | null;
   message: string | null;
+  tableLabel: string | null;
   items: UploadItem[];
   onItemChange: (id: string, patch: Partial<UploadItem>) => void;
   concurrency?: number;
@@ -116,6 +140,7 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
     clientFingerprint,
     displayName,
     message,
+    tableLabel,
     items,
     onItemChange,
   } = opts;
@@ -133,6 +158,7 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
           clientFingerprint,
           displayName: displayName?.trim() || null,
           message: message?.trim() || null,
+          tableLabel: tableLabel?.trim() || null,
           files: items.map((it) => ({
             mime: it.file.type as AllowedMime,
             size: it.file.size,
@@ -180,7 +206,9 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
             err instanceof HttpError ? isRetryableStatus(err.status) : true,
         );
 
-        const dims = await readImageDimensions(item.file);
+        const dims = isVideoMime(item.file.type)
+          ? await readVideoDimensions(item.file)
+          : await readImageDimensions(item.file);
 
         // Finalize with retry — 404 is retryable (storage eventual
         // consistency), 400 is not (size or path mismatch will recur).
@@ -193,6 +221,7 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
                 mediaId: slot.mediaId,
                 eventId: sign.eventId,
                 guestId: sign.guestId,
+                tableId: sign.tableId,
                 storagePath: slot.storagePath,
                 mime: item.file.type,
                 size: item.file.size,

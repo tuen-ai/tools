@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE_BYTES,
   MAX_FILES_PER_REQUEST,
+  MAX_VIDEO_DURATION_SEC,
+  isVideoMime,
+  maxSizeFor,
   type AllowedMime,
 } from "@/lib/upload/constants";
 import {
@@ -35,6 +37,25 @@ interface Props {
   eventSlug: string;
   maxPerGuest: number;
   primaryColor: string | null;
+  tableLabel: string | null;
+}
+
+function videoDurationOk(file: File): Promise<boolean> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => {
+      const ok = v.duration <= MAX_VIDEO_DURATION_SEC + 0.5;
+      URL.revokeObjectURL(url);
+      resolve(ok);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(true); // err on the side of trying — server will reject if size is wrong
+    };
+    v.src = url;
+  });
 }
 
 export function UploadClient({
@@ -42,6 +63,7 @@ export function UploadClient({
   eventSlug,
   maxPerGuest,
   primaryColor,
+  tableLabel,
 }: Props) {
   const t = DICT[lang];
   const primaryButtonClass = primaryColor
@@ -80,7 +102,7 @@ export function UploadClient({
     );
   }
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
 
@@ -92,9 +114,16 @@ export function UploadClient({
         rejected.push(t.errUnsupported(file.name));
         continue;
       }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
+      if (file.size > maxSizeFor(file.type)) {
         rejected.push(t.errOverSize(file.name));
         continue;
+      }
+      if (isVideoMime(file.type)) {
+        const ok = await videoDurationOk(file);
+        if (!ok) {
+          rejected.push(t.errVideoTooLong(file.name));
+          continue;
+        }
       }
       accepted.push({
         id: crypto.randomUUID(),
@@ -123,6 +152,7 @@ export function UploadClient({
         clientFingerprint: fingerprint,
         displayName: name || null,
         message: message || null,
+        tableLabel: tableLabel ?? null,
         items,
         onItemChange: patchItem,
       });
@@ -191,7 +221,7 @@ export function UploadClient({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm"
         multiple
         capture="environment"
         onChange={handleFileSelect}
@@ -293,16 +323,25 @@ function FileList({ items }: { items: UploadItem[] }) {
 
 function Thumb({ file }: { file: File }) {
   const [url, setUrl] = useState<string | null>(null);
+  const isVideo = isVideoMime(file.type);
   useEffect(() => {
     const u = URL.createObjectURL(file);
     setUrl(u);
     return () => URL.revokeObjectURL(u);
   }, [file]);
   return (
-    <div className="h-12 w-12 shrink-0 rounded-lg bg-cream-100 overflow-hidden">
-      {url ? (
+    <div className="relative h-12 w-12 shrink-0 rounded-lg bg-cream-100 overflow-hidden">
+      {url && !isVideo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : null}
+      {url && isVideo ? (
+        <video src={url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+      ) : null}
+      {isVideo ? (
+        <span className="absolute inset-0 flex items-center justify-center bg-ink-900/30 text-white text-[10px]" aria-hidden>
+          ▶
+        </span>
       ) : null}
     </div>
   );
@@ -330,6 +369,42 @@ function StatusBadge({ status }: { status: UploadItem["status"] }) {
   );
 }
 
+const CONFETTI_COLORS = [
+  "#D9989E", "#E8B4B8", "#C77B82",
+  "#8AA088", "#6E8A6C",
+  "#F5EFE6", "#EADFD0",
+];
+
+function Confetti({ count = 32 }: { count?: number }) {
+  // Deterministic-ish per-render layout — random is fine because the
+  // component only renders once on the success transition.
+  const pieces = Array.from({ length: count }, (_, i) => {
+    const left = Math.random() * 100;
+    const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    const delay = Math.random() * 600;
+    const duration = 1800 + Math.random() * 1200;
+    const drift = -30 + Math.random() * 60;
+    return { left, color, delay, duration, drift };
+  });
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden z-50">
+      {pieces.map((p, i) => (
+        <span
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: `${p.left}%`,
+            background: p.color,
+            animationDelay: `${p.delay}ms`,
+            animationDuration: `${p.duration}ms`,
+            transform: `translate(${p.drift}px, 0)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function ThankYou({
   lang,
   doneCount,
@@ -344,28 +419,32 @@ function ThankYou({
   onAddMore: () => void;
 }) {
   const t = DICT[lang];
+  const showConfetti = doneCount > 0 && failedCount === 0;
   return (
-    <div className="bg-white rounded-3xl shadow-soft p-8 text-center">
-      <div className="text-5xl mb-4" aria-hidden>
-        💝
+    <>
+      {showConfetti ? <Confetti /> : null}
+      <div className="bg-white rounded-3xl shadow-soft p-8 text-center animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]">
+        <div className="text-6xl mb-4 inline-block animate-[pop_700ms_cubic-bezier(0.2,0.8,0.4,1)_both]" aria-hidden>
+          💝
+        </div>
+        <h2 className="font-serif text-2xl text-ink-900 mb-2">{t.thanksTitle}</h2>
+        <p className="text-ink-700 text-sm leading-relaxed mb-6">
+          {t.thanksBody(doneCount)}
+          {failedCount > 0 ? t.thanksFailed(failedCount) : ""}
+        </p>
+        <button
+          type="button"
+          onClick={onAddMore}
+          className={
+            primaryColor
+              ? "rounded-xl px-5 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 transition"
+              : "rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 transition"
+          }
+          style={primaryColor ? { backgroundColor: primaryColor } : undefined}
+        >
+          {t.addMore}
+        </button>
       </div>
-      <h2 className="font-serif text-2xl text-ink-900 mb-2">{t.thanksTitle}</h2>
-      <p className="text-ink-700 text-sm leading-relaxed mb-6">
-        {t.thanksBody(doneCount)}
-        {failedCount > 0 ? t.thanksFailed(failedCount) : ""}
-      </p>
-      <button
-        type="button"
-        onClick={onAddMore}
-        className={
-          primaryColor
-            ? "rounded-xl px-5 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 transition"
-            : "rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 transition"
-        }
-        style={primaryColor ? { backgroundColor: primaryColor } : undefined}
-      >
-        {t.addMore}
-      </button>
-    </div>
+    </>
   );
 }
