@@ -96,6 +96,7 @@ export default async function EventDashboardPage({ params }: Props) {
         lang={lang}
         eventId={eventId}
         initialRows={messages.rows}
+        initialAudioUrls={messages.audioUrls}
       />
 
       <MediaGrid

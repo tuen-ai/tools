@@ -15,6 +15,7 @@ import {
   type UploadItem,
 } from "@/lib/upload/client-upload";
 import { DICT, type Lang } from "@/lib/i18n";
+import { AudioRecorder } from "@/components/guest/audio-recorder";
 
 const FP_KEY = "wgp.fingerprint";
 const NAME_KEY = "wgp.name";
@@ -75,6 +76,8 @@ export function UploadClient({
   const [fingerprint, setFingerprint] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
+  const [messageMode, setMessageMode] = useState<"text" | "voice">("text");
+  const [voiceSent, setVoiceSent] = useState(0);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -202,21 +205,69 @@ export function UploadClient({
         />
       </label>
 
-      <label className="block">
-        <span className="text-sm text-ink-700 font-medium">
-          {t.messageLabel}{" "}
-          <span className="text-ink-500 font-normal">{t.optional}</span>
-        </span>
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder={t.messagePlaceholder}
-          maxLength={500}
-          rows={2}
-          disabled={isUploading}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
-        />
-      </label>
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-sm text-ink-700 font-medium">
+            {t.messageLabel}{" "}
+            <span className="text-ink-500 font-normal">{t.optional}</span>
+          </span>
+          <div
+            className="inline-flex rounded-lg bg-cream-100 p-0.5 text-[11px]"
+            role="tablist"
+          >
+            <button
+              type="button"
+              onClick={() => setMessageMode("text")}
+              className={`px-2.5 py-1 rounded-md transition ${
+                messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
+              }`}
+              role="tab"
+              aria-selected={messageMode === "text"}
+            >
+              ✏️ {lang === "zh-Hant" ? "文字" : "Text"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMessageMode("voice")}
+              className={`px-2.5 py-1 rounded-md transition ${
+                messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
+              }`}
+              role="tab"
+              aria-selected={messageMode === "voice"}
+            >
+              🎤 {lang === "zh-Hant" ? "語音" : "Voice"}
+            </button>
+          </div>
+        </div>
+
+        {messageMode === "text" ? (
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder={t.messagePlaceholder}
+            maxLength={500}
+            rows={2}
+            disabled={isUploading}
+            className="w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
+          />
+        ) : (
+          <AudioRecorder
+            lang={lang}
+            eventSlug={eventSlug}
+            clientFingerprint={fingerprint}
+            displayName={name || null}
+            primaryColor={primaryColor}
+            onSent={() => setVoiceSent((n) => n + 1)}
+          />
+        )}
+        {messageMode === "voice" && voiceSent > 0 ? (
+          <p className="mt-2 text-[11px] text-sage-600 text-center">
+            {lang === "zh-Hant"
+              ? `已送出 ${voiceSent} 段語音留言`
+              : `${voiceSent} voice message${voiceSent === 1 ? "" : "s"} sent`}
+          </p>
+        ) : null}
+      </div>
 
       <input
         ref={fileInputRef}

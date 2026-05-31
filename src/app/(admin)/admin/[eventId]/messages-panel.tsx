@@ -9,7 +9,8 @@ import { deleteMessageAction } from "./message-actions";
 
 interface MessageRow {
   id: string;
-  body: string;
+  body: string | null;
+  audio_path: string | null;
   created_at: string;
   guest_id: string | null;
   guests: { display_name: string | null } | null;
@@ -19,13 +20,20 @@ interface Props {
   lang: Lang;
   eventId: string;
   initialRows: MessageRow[];
+  initialAudioUrls: Record<string, string>;
 }
 
 const FRESH_HIGHLIGHT_MS = 4000;
 
-export function MessagesPanel({ lang, eventId, initialRows }: Props) {
+export function MessagesPanel({
+  lang,
+  eventId,
+  initialRows,
+  initialAudioUrls,
+}: Props) {
   const t = ADMIN_DICT[lang];
   const [rows, setRows] = useState<MessageRow[]>(initialRows);
+  const [audioUrls] = useState<Record<string, string>>(initialAudioUrls);
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -93,6 +101,7 @@ export function MessagesPanel({ lang, eventId, initialRows }: Props) {
             t={t}
             eventId={eventId}
             row={m}
+            audioUrl={audioUrls[m.id] ?? null}
             isFresh={freshIds.has(m.id)}
             onRemoved={() =>
               setRows((prev) => prev.filter((r) => r.id !== m.id))
@@ -108,12 +117,14 @@ function MessageItem({
   t,
   eventId,
   row,
+  audioUrl,
   isFresh,
   onRemoved,
 }: {
   t: AdminDict;
   eventId: string;
   row: MessageRow;
+  audioUrl: string | null;
   isFresh: boolean;
   onRemoved: () => void;
 }) {
@@ -140,9 +151,19 @@ function MessageItem({
         </span>
         <span className="text-[11px] text-ink-500 shrink-0">{when}</span>
       </div>
-      <p className="mt-1 text-sm text-ink-700 whitespace-pre-wrap break-words">
-        {row.body}
-      </p>
+      {row.body ? (
+        <p className="mt-1 text-sm text-ink-700 whitespace-pre-wrap break-words">
+          {row.body}
+        </p>
+      ) : null}
+      {audioUrl || row.audio_path ? (
+        <audio
+          src={audioUrl ?? undefined}
+          controls
+          preload="metadata"
+          className="mt-2 w-full"
+        />
+      ) : null}
       <div className="mt-1 opacity-0 group-hover:opacity-100 transition">
         <button
           type="button"

@@ -109,14 +109,16 @@ export type Database = {
           id: string;
           event_id: string;
           guest_id: string | null;
-          body: string;
+          body: string | null;
+          audio_path: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           event_id: string;
           guest_id?: string | null;
-          body: string;
+          body?: string | null;
+          audio_path?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
         Relationships: [
