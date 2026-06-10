@@ -26,7 +26,7 @@ interface SignResponse {
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_MS = 1000;
 
-class HttpError extends Error {
+export class HttpError extends Error {
   status: number;
   constructor(status: number, message: string) {
     super(message);
@@ -34,7 +34,7 @@ class HttpError extends Error {
   }
 }
 
-function isRetryableStatus(status: number): boolean {
+export function isRetryableStatus(status: number): boolean {
   // 408 timeout, 429 rate-limit (with backoff this is fine), 5xx server,
   // 404 because Supabase Storage is eventually consistent — the HEAD in
   // finalize occasionally races a just-uploaded PUT.
@@ -43,7 +43,7 @@ function isRetryableStatus(status: number): boolean {
   return false;
 }
 
-async function withRetry<T>(
+export async function withRetry<T>(
   fn: (attempt: number) => Promise<T>,
   isRetryable: (err: unknown) => boolean,
 ): Promise<T> {

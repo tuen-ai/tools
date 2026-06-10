@@ -65,7 +65,7 @@ export default async function QRPage({ params }: Props) {
         <p className="text-sm text-ink-500 mb-6">{t.qrScanInstruction}</p>
         <div
           className="mx-auto inline-block"
-          // eslint-disable-next-line react/no-danger
+           
           dangerouslySetInnerHTML={{ __html: svg }}
         />
         <p className="font-mono text-xs text-ink-500 mt-6 break-all">{url}</p>

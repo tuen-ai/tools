@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { Readable } from "node:stream";
+// Pinned to archiver v7 (CJS). v8 went pure-ESM with named exports only,
+// which silently breaks this default import at runtime.
 import archiver from "archiver";
 
 import { assertEventAdmin, AuthorizationError } from "@/lib/auth/require-admin";

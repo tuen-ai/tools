@@ -26,6 +26,8 @@ export interface ListMediaPageArgs {
   limit: number;
   /** Defaults to ['visible', 'hidden'] — admins don't see 'deleted'. */
   statuses?: MediaStatus[];
+  /** When set, only media tagged with this table. */
+  tableId?: string;
 }
 
 export interface MediaPage {
@@ -35,14 +37,16 @@ export interface MediaPage {
 
 export async function listMediaPage(
   client: SupabaseClient<Database>,
-  { eventId, offset, limit, statuses }: ListMediaPageArgs,
+  { eventId, offset, limit, statuses, tableId }: ListMediaPageArgs,
 ): Promise<MediaPage> {
   const filterStatuses = statuses ?? ["visible", "hidden"];
-  const { data, count, error } = await client
+  let q = client
     .from("media")
     .select("*", { count: "exact" })
     .eq("event_id", eventId)
-    .in("status", filterStatuses)
+    .in("status", filterStatuses);
+  if (tableId) q = q.eq("table_id", tableId);
+  const { data, count, error } = await q
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw error;

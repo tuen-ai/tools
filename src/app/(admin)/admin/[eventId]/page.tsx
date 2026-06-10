@@ -2,9 +2,10 @@ import Link from "next/link";
 
 import { requireEventAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getEventById } from "@/lib/db/events";
+import { getEventById, getEventStats } from "@/lib/db/events";
 import { listMediaPage, signThumbnailUrls } from "@/lib/db/media";
 import { listMessagesPage } from "@/lib/db/messages";
+import { listTables } from "@/lib/db/tables";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { MediaGrid } from "./media-grid";
@@ -22,10 +23,12 @@ export default async function EventDashboardPage({ params }: Props) {
   await requireEventAdmin(eventId);
 
   const admin = createAdminClient();
-  const [event, page, messages, lang] = await Promise.all([
+  const [event, page, messages, tables, stats, lang] = await Promise.all([
     getEventById(admin, eventId),
     listMediaPage(admin, { eventId, offset: 0, limit: PAGE_SIZE }),
     listMessagesPage(admin, { eventId, offset: 0, limit: MESSAGE_LIMIT }),
+    listTables(admin, eventId),
+    getEventStats(admin, eventId),
     resolveLangServer(),
   ]);
   const t = ADMIN_DICT[lang];
@@ -36,6 +39,13 @@ export default async function EventDashboardPage({ params }: Props) {
 
   const signed = await signThumbnailUrls(admin, page.rows);
   const thumbMap = new Map(signed.map((s) => [s.id, s.url]));
+
+  const statItems = [
+    { label: t.statPhotos, value: page.total, icon: "📷" },
+    { label: t.statGuests, value: stats.guests, icon: "🥂" },
+    { label: t.statMessages, value: stats.messages, icon: "💌" },
+    { label: t.statTables, value: tables.length, icon: "🪑" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -92,6 +102,25 @@ export default async function EventDashboardPage({ params }: Props) {
         </nav>
       </header>
 
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {statItems.map((s) => (
+          <div
+            key={s.label}
+            className="bg-white rounded-2xl border border-cream-200 px-4 py-3 flex items-center gap-3"
+          >
+            <span className="text-xl" aria-hidden>
+              {s.icon}
+            </span>
+            <div className="min-w-0">
+              <p className="font-serif text-xl text-ink-900 leading-tight">
+                {s.value}
+              </p>
+              <p className="text-[11px] text-ink-500">{s.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <MessagesPanel
         lang={lang}
         eventId={eventId}
@@ -106,6 +135,7 @@ export default async function EventDashboardPage({ params }: Props) {
         initialThumbs={Object.fromEntries(thumbMap)}
         total={page.total}
         pageSize={PAGE_SIZE}
+        tables={tables.map((tb) => ({ id: tb.id, label: tb.label }))}
       />
     </div>
   );

@@ -240,7 +240,7 @@ hard-delete things immediately if they want.
 ### Upload retry
 
 `src/lib/upload/client-upload.ts` wraps every network step in a small
-retry helper:
+retry helper (exported — the audio recorder reuses it):
 
 - **sign**: retry on 5xx / network / 404 / 408. Do NOT retry 429 —
   retrying makes the rate-limit worse.
@@ -250,6 +250,20 @@ retry helper:
 
 Max 3 attempts each, exponential backoff (1s → 2s → 4s). Progress bar
 visibly resets to 0 between attempts so the guest sees activity.
+
+### Pinned dependency gotchas
+
+- **archiver is pinned to v7** (CJS). v8 went pure-ESM with named
+  exports only; `import archiver from "archiver"` type-checks against
+  `@types/archiver` but is `undefined` at runtime, silently breaking the
+  ZIP export. Don't bump to v8 without rewriting the import as
+  `import { ZipArchive } from "archiver"` AND adding a local types shim.
+
+### Lint
+
+ESLint 9 flat config in `eslint.config.mjs` (extends
+`next/core-web-vitals` + `next/typescript` via FlatCompat).
+`npm run lint` must be clean before committing.
 
 ### Email confirmation
 

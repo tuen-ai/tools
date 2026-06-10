@@ -10,6 +10,11 @@ import { setMediaStatusAction } from "./actions";
 
 type MediaRow = Database["public"]["Tables"]["media"]["Row"];
 
+export interface TableOption {
+  id: string;
+  label: string;
+}
+
 interface Props {
   lang: Lang;
   eventId: string;
@@ -17,6 +22,7 @@ interface Props {
   initialThumbs: Record<string, string>;
   total: number;
   pageSize: number;
+  tables: TableOption[];
 }
 
 interface MorePageResponse {
@@ -34,6 +40,7 @@ export function MediaGrid({
   initialThumbs,
   total: initialTotal,
   pageSize,
+  tables,
 }: Props) {
   const t = ADMIN_DICT[lang];
   const [rows, setRows] = useState<MediaRow[]>(initialRows);
@@ -43,11 +50,18 @@ export function MediaGrid({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const [liveStatus, setLiveStatus] = useState<"connecting" | "live" | "offline">("connecting");
+  // null = all tables. Switching refetches page 1 with the filter applied.
+  const [tableFilter, setTableFilter] = useState<string | null>(null);
+  const [filterLoading, setFilterLoading] = useState(false);
+
+  const tableLabelById = new Map(tables.map((tb) => [tb.id, tb.label]));
 
   // Refs let the realtime callbacks read current state without re-subscribing
   // every render.
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
+  const tableFilterRef = useRef(tableFilter);
+  tableFilterRef.current = tableFilter;
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -65,6 +79,10 @@ export function MediaGrid({
         async (payload) => {
           const row = payload.new as MediaRow;
           if (rowsRef.current.some((r) => r.id === row.id)) return;
+          // Respect the active table filter — a photo from another table
+          // shouldn't pop into a filtered view.
+          const filter = tableFilterRef.current;
+          if (filter && row.table_id !== filter) return;
 
           // Fetch the thumb URL — bucket is private, can't sign client-side.
           let url: string | undefined;
@@ -121,12 +139,19 @@ export function MediaGrid({
   const visibleRows = rows.filter((r) => r.status !== "deleted");
   const hasMore = visibleRows.length < total;
 
+  function pageUrl(offset: number, tableId: string | null): string {
+    const params = new URLSearchParams({
+      offset: String(offset),
+      limit: String(pageSize),
+    });
+    if (tableId) params.set("table", tableId);
+    return `/api/admin/events/${eventId}/media?${params.toString()}`;
+  }
+
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await fetch(
-        `/api/admin/events/${eventId}/media?offset=${rows.length}&limit=${pageSize}`,
-      );
+      const res = await fetch(pageUrl(rows.length, tableFilter));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as MorePageResponse;
       setRows((prev) => [...prev, ...data.rows]);
@@ -137,16 +162,54 @@ export function MediaGrid({
     }
   }
 
+  async function applyFilter(tableId: string | null) {
+    if (tableId === tableFilter || filterLoading) return;
+    setTableFilter(tableId);
+    setFilterLoading(true);
+    try {
+      const res = await fetch(pageUrl(0, tableId));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as MorePageResponse;
+      setRows(data.rows);
+      setThumbs((prev) => ({ ...prev, ...data.thumbs }));
+      setTotal(data.total);
+    } finally {
+      setFilterLoading(false);
+    }
+  }
+
   return (
     <>
       <LiveBadge status={liveStatus} count={total} t={t} />
+
+      {tables.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2" role="group">
+          <FilterChip
+            label={t.filterAll}
+            active={tableFilter === null}
+            disabled={filterLoading}
+            onClick={() => applyFilter(null)}
+          />
+          {tables.map((tb) => (
+            <FilterChip
+              key={tb.id}
+              label={`🪑 ${tb.label}`}
+              active={tableFilter === tb.id}
+              disabled={filterLoading}
+              onClick={() => applyFilter(tb.id)}
+            />
+          ))}
+        </div>
+      ) : null}
 
       {visibleRows.length === 0 ? (
         <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center">
           <div className="text-4xl mb-3" aria-hidden>
             📷
           </div>
-          <p className="text-ink-500 text-sm">{t.gridEmpty}</p>
+          <p className="text-ink-500 text-sm">
+            {tableFilter ? t.gridEmptyFiltered : t.gridEmpty}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -156,6 +219,9 @@ export function MediaGrid({
               t={t}
               row={row}
               thumb={thumbs[row.id]}
+              tableLabel={
+                row.table_id ? (tableLabelById.get(row.table_id) ?? null) : null
+              }
               isFresh={freshIds.has(row.id)}
               isActive={activeId === row.id}
               onOpen={() => setActiveId(row.id)}
@@ -221,10 +287,39 @@ function LiveBadge({
   );
 }
 
+function FilterChip({
+  label,
+  active,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active}
+      className={`rounded-full px-3.5 py-1.5 text-xs transition disabled:opacity-60 ${
+        active
+          ? "bg-ink-900 text-white"
+          : "border border-cream-200 bg-white text-ink-700 hover:border-blush-400"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 function MediaTile({
   t,
   row,
   thumb,
+  tableLabel,
   isFresh,
   isActive,
   onOpen,
@@ -234,6 +329,7 @@ function MediaTile({
   t: AdminDict;
   row: MediaRow;
   thumb: string | undefined;
+  tableLabel: string | null;
   isFresh: boolean;
   isActive: boolean;
   onOpen: () => void;
@@ -289,6 +385,11 @@ function MediaTile({
       {isVideo ? (
         <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5 pointer-events-none">
           {t.tileVideo}
+        </span>
+      ) : null}
+      {tableLabel ? (
+        <span className="absolute bottom-2 right-2 text-[10px] bg-white/85 text-ink-700 rounded px-1.5 py-0.5 pointer-events-none backdrop-blur-sm">
+          🪑 {tableLabel}
         </span>
       ) : null}
       {row.status === "hidden" ? (

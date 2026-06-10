@@ -61,11 +61,11 @@ export async function uploadCoverAction(
     .upload(path, buf, { contentType: file.type, upsert: true });
   if (upErr) return { ok: false, error: upErr.message };
 
-  await updateEvent(admin, eventId, { cover_image_path: path });
+  const event = await updateEvent(admin, eventId, { cover_image_path: path });
 
   revalidatePath(`/admin/${eventId}`);
   revalidatePath(`/admin/${eventId}/settings`);
-  revalidatePath(`/e/${eventId}`); // bust the guest page cache
+  revalidatePath(`/e/${event.slug}`); // guest page is keyed by slug, not id
   return { ok: true };
 }
 
@@ -98,7 +98,8 @@ export async function removeCoverAction(
       .remove(list.map((o) => `events/${eventId}/${o.name}`));
   }
 
-  await updateEvent(admin, eventId, { cover_image_path: null });
+  const event = await updateEvent(admin, eventId, { cover_image_path: null });
   revalidatePath(`/admin/${eventId}/settings`);
+  revalidatePath(`/e/${event.slug}`);
   return { ok: true };
 }

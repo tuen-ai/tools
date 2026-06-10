@@ -66,3 +66,28 @@ export async function updateEvent(
   if (error) throw error;
   return data;
 }
+
+export interface EventStats {
+  guests: number;
+  messages: number;
+}
+
+/** Head-only counts for the dashboard stats row. */
+export async function getEventStats(
+  client: SupabaseClient<Database>,
+  eventId: string,
+): Promise<EventStats> {
+  const [guests, messages] = await Promise.all([
+    client
+      .from("guests")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId),
+    client
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId),
+  ]);
+  if (guests.error) throw guests.error;
+  if (messages.error) throw messages.error;
+  return { guests: guests.count ?? 0, messages: messages.count ?? 0 };
+}

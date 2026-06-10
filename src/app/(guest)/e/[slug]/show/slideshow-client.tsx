@@ -24,7 +24,6 @@ interface Props {
 
 const SLIDE_MS = 6000;          // hold time per image
 const VIDEO_MAX_MS = 32000;     // safety cap for video slides
-const TRANSITION_MS = 800;      // crossfade duration
 const POLL_INTERVAL_MS = 8000;  // how often we ask for new slides
 const NEW_TOAST_MS = 4500;      // "New from a guest" banner duration
 const IDLE_CURSOR_MS = 3000;    // hide cursor after this idle time
@@ -44,6 +43,8 @@ export function SlideshowClient({
   const newCountClearRef = useRef<number | null>(null);
   const slidesRef = useRef(slides);
   slidesRef.current = slides;
+  // Outgoing slide kept around so the incoming one can crossfade over it.
+  const prevSlideRef = useRef<Slide | null>(null);
 
   // Poll for new slides — chronological since-cursor.
   useEffect(() => {
@@ -89,6 +90,7 @@ export function SlideshowClient({
     setIndex((i) => {
       const len = slidesRef.current.length;
       if (len === 0) return i;
+      prevSlideRef.current = slidesRef.current[i % len] ?? null;
       return (i + 1) % len;
     });
   }, []);
@@ -147,6 +149,7 @@ export function SlideshowClient({
 
   const current = slides[index % slides.length];
   const next = slides[(index + 1) % slides.length];
+  const previous = prevSlideRef.current;
 
   return (
     <div
@@ -154,10 +157,13 @@ export function SlideshowClient({
         cursorVisible ? "" : "cursor-none"
       }`}
     >
-      {/* Two stacked slide layers; we crossfade by toggling opacity on
-          re-render. key forces fresh mount per slide for clean Ken Burns
-          animation restart. */}
-      <SlideLayer key={current.id} slide={current} active />
+      {/* Crossfade: the outgoing slide stays mounted underneath while
+          the incoming one fades in over it. key forces a fresh mount per
+          slide so the Ken Burns animation restarts from zero. */}
+      {previous && previous.id !== current.id ? (
+        <SlideLayer key={`prev-${previous.id}`} slide={previous} entering={false} />
+      ) : null}
+      <SlideLayer key={current.id} slide={current} entering />
 
       {/* Preload next image to avoid any blink on transition. */}
       {next ? <link rel="preload" as="image" href={next.url} /> : null}
@@ -189,7 +195,8 @@ export function SlideshowClient({
   );
 }
 
-function SlideLayer({ slide, active }: { slide: Slide; active: boolean }) {
+function SlideLayer({ slide, entering }: { slide: Slide; entering: boolean }) {
+  const fade = entering ? "animate-[fadein_800ms_ease-out_both]" : "";
   if (slide.kind === "video") {
     return (
       <video
@@ -198,18 +205,12 @@ function SlideLayer({ slide, active }: { slide: Slide; active: boolean }) {
         autoPlay
         muted
         playsInline
-        className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-700 ${
-          active ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 w-full h-full object-contain bg-black ${fade}`}
       />
     );
   }
   return (
-    <div
-      className={`absolute inset-0 transition-opacity duration-700 ${
-        active ? "opacity-100" : "opacity-0"
-      }`}
-    >
+    <div className={`absolute inset-0 ${fade}`}>
       {/* Background blurred copy fills the frame for portrait/landscape mix */}
       <div
         className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-50"

@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 const QuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(100_000),
   limit: z.coerce.number().int().min(1).max(120),
+  table: z.string().uuid().optional(),
 });
 
 interface RouteContext {
@@ -32,6 +33,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   const parsed = QuerySchema.safeParse({
     offset: url.searchParams.get("offset") ?? "0",
     limit: url.searchParams.get("limit") ?? "60",
+    table: url.searchParams.get("table") ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_query" }, { status: 400 });
@@ -42,6 +44,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     eventId,
     offset: parsed.data.offset,
     limit: parsed.data.limit,
+    tableId: parsed.data.table,
   });
   const thumbs = await signThumbnailUrls(admin, page.rows);
 

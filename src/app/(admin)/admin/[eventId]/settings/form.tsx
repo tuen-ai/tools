@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import type { Database } from "@/types/database";
 import { ADMIN_DICT, lookupAdminError } from "@/lib/i18n/admin-dict";
@@ -30,8 +30,19 @@ export function SettingsForm({
   const [state, action, pending] = useActionState(updateEventAction, INITIAL);
   const initialColor = readPrimaryColor(event.theme);
   const [primaryColor, setPrimaryColor] = useState(initialColor);
+  const [showSaved, setShowSaved] = useState(false);
   const isDefault = primaryColor.toLowerCase() === DEFAULT_PRIMARY.toLowerCase();
   const errMessage = state.error ? lookupAdminError(t, state.error) : null;
+
+  // Flash the "saved" toast for a few seconds rather than leaving it up
+  // until the next submit.
+  useEffect(() => {
+    if (state.saved && !pending) {
+      setShowSaved(true);
+      const timer = window.setTimeout(() => setShowSaved(false), 3500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [state, pending]);
 
   return (
     <form
@@ -159,8 +170,8 @@ export function SettingsForm({
         <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
           {errMessage}
         </div>
-      ) : state.saved && !pending ? (
-        <div className="rounded-xl bg-sage-500/15 px-4 py-3 text-sm text-sage-600">
+      ) : showSaved ? (
+        <div className="rounded-xl bg-sage-500/15 px-4 py-3 text-sm text-sage-600 animate-[fadein_200ms_ease-out]">
           {t.saved}
         </div>
       ) : null}

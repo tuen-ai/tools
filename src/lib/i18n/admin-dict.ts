@@ -53,10 +53,18 @@ export interface AdminDict {
   liveOffline: string;
   photoCount: (n: number) => string;
 
+  // ── Stats row ──────────────────────────────────────────────────
+  statPhotos: string;
+  statGuests: string;
+  statMessages: string;
+  statTables: string;
+
   // ── Media grid ─────────────────────────────────────────────────
+  filterAll: string;
   loadingMore: string;
   loadMore: (left: number) => string;
   gridEmpty: string;
+  gridEmptyFiltered: string;
   tileNew: string;
   tileHidden: string;
   tileVideo: string;
@@ -203,9 +211,16 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     liveOffline: "已斷線",
     photoCount: (n) => `${n} 張相片`,
 
+    statPhotos: "相片",
+    statGuests: "賓客",
+    statMessages: "留言",
+    statTables: "座位",
+
+    filterAll: "全部",
     loadingMore: "載入中…",
     loadMore: (left) => `載入更多(尚餘 ${left} 張)`,
     gridEmpty: "暫未有相片。將 QR code 分享俾賓客就會開始收到。",
+    gridEmptyFiltered: "呢張枱暫時未有相片。",
     tileNew: "新到",
     tileHidden: "已隱藏",
     tileVideo: "▶ 短片",
@@ -351,9 +366,16 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     liveOffline: "Disconnected",
     photoCount: (n) => `${n} photo${n === 1 ? "" : "s"}`,
 
+    statPhotos: "Photos",
+    statGuests: "Guests",
+    statMessages: "Messages",
+    statTables: "Tables",
+
+    filterAll: "All",
     loadingMore: "Loading…",
     loadMore: (left) => `Load more (${left} left)`,
     gridEmpty: "No photos yet. Share the QR code with your guests to start.",
+    gridEmptyFiltered: "No photos from this table yet.",
     tileNew: "New",
     tileHidden: "Hidden",
     tileVideo: "▶ Video",

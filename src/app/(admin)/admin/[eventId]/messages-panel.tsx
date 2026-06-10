@@ -33,7 +33,8 @@ export function MessagesPanel({
 }: Props) {
   const t = ADMIN_DICT[lang];
   const [rows, setRows] = useState<MessageRow[]>(initialRows);
-  const [audioUrls] = useState<Record<string, string>>(initialAudioUrls);
+  const [audioUrls, setAudioUrls] =
+    useState<Record<string, string>>(initialAudioUrls);
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -50,10 +51,31 @@ export function MessagesPanel({
         },
         async (payload) => {
           const row = payload.new as Omit<MessageRow, "guests">;
-          // Realtime payload doesn't include the joined guests row;
-          // we don't have a cheap way to resolve it here without
-          // another round-trip. Show "Guest" placeholder for now.
-          const next: MessageRow = { ...row, guests: null };
+          // Realtime payloads carry neither the joined guests row nor a
+          // usable signed URL for the (private) audio object — hydrate
+          // both from the detail endpoint before inserting the row.
+          let next: MessageRow = { ...row, guests: null };
+          try {
+            const res = await fetch(`/api/admin/messages/${row.id}/detail`);
+            if (res.ok) {
+              const detail = (await res.json()) as {
+                displayName: string | null;
+                audioUrl: string | null;
+              };
+              next = {
+                ...next,
+                guests: detail.displayName
+                  ? { display_name: detail.displayName }
+                  : null,
+              };
+              if (detail.audioUrl) {
+                setAudioUrls((prev) => ({ ...prev, [row.id]: detail.audioUrl! }));
+              }
+            }
+          } catch {
+            // Row still renders with the "Guest" placeholder; the audio
+            // player appears after a page reload.
+          }
           setRows((prev) =>
             prev.some((r) => r.id === next.id) ? prev : [next, ...prev],
           );
@@ -156,13 +178,8 @@ function MessageItem({
           {row.body}
         </p>
       ) : null}
-      {audioUrl || row.audio_path ? (
-        <audio
-          src={audioUrl ?? undefined}
-          controls
-          preload="metadata"
-          className="mt-2 w-full"
-        />
+      {audioUrl ? (
+        <audio src={audioUrl} controls preload="metadata" className="mt-2 w-full" />
       ) : null}
       <div className="mt-1 opacity-0 group-hover:opacity-100 transition">
         <button

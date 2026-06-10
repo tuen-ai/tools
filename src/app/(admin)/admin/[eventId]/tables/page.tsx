@@ -93,7 +93,7 @@ export default async function TablesPage({ params }: Props) {
               </h2>
               <div
                 className="mx-auto inline-block mb-3"
-                // eslint-disable-next-line react/no-danger
+                 
                 dangerouslySetInnerHTML={{ __html: svg }}
               />
               <p className="font-mono text-[9px] text-ink-500 break-all">{url}</p>

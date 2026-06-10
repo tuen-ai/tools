@@ -105,7 +105,7 @@ function MinimalTemplate(p: TemplateProps) {
       <div className="flex flex-col items-center">
         <div
           className="bg-white rounded-3xl p-6 shadow-soft"
-          // eslint-disable-next-line react/no-danger
+           
           dangerouslySetInnerHTML={{ __html: p.qrSvg }}
         />
         <p className="mt-6 text-ink-700 text-sm">{p.scanInstruction}</p>
@@ -153,7 +153,7 @@ function PhotoTemplate(p: TemplateProps) {
           <div
             className="mx-auto inline-block"
             style={{ width: "60mm" }}
-            // eslint-disable-next-line react/no-danger
+             
             dangerouslySetInnerHTML={{ __html: p.qrSvg }}
           />
           <p className="mt-4 text-ink-700 text-sm">{p.scanInstruction}</p>
@@ -223,7 +223,7 @@ function OrnateTemplate(p: TemplateProps) {
         <div
           className="rounded-3xl p-6 shadow-soft"
           style={{ background: "#FBF8F3", border: `1px solid ${tint}` }}
-          // eslint-disable-next-line react/no-danger
+           
           dangerouslySetInnerHTML={{ __html: p.qrSvg }}
         />
         <p

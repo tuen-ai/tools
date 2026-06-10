@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 
 import { DICT, type Lang } from "@/lib/i18n";
+import {
+  HttpError,
+  isRetryableStatus,
+  withRetry,
+} from "@/lib/upload/client-upload";
 
 const MAX_DURATION_SEC = 30;
 
@@ -107,7 +112,7 @@ export function AudioRecorder({
       stopTimerRef.current = window.setTimeout(() => {
         if (mr.state === "recording") mr.stop();
       }, MAX_DURATION_SEC * 1000);
-    } catch (err) {
+    } catch {
       setPhase("error");
       setError(
         lang === "zh-Hant"
@@ -139,51 +144,74 @@ export function AudioRecorder({
     setError(null);
     try {
       const mime = normaliseMime(blob.type || "audio/webm");
-      const signRes = await fetch("/api/messages/audio/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventSlug,
-          clientFingerprint,
-          displayName: displayName?.trim() || null,
-          audioMime: mime,
-          audioSize: blob.size,
-        }),
-      });
-      if (!signRes.ok) {
-        const body = await signRes.json().catch(() => ({}));
-        throw new Error(body.error ?? `sign_failed_${signRes.status}`);
-      }
-      const sign = (await signRes.json()) as {
-        messageId: string;
-        eventId: string;
-        guestId: string;
-        storagePath: string;
-        signedUrl: string;
-      };
 
-      const putRes = await fetch(sign.signedUrl, {
-        method: "PUT",
-        headers: { "Content-Type": mime, "x-upsert": "false" },
-        body: blob,
-      });
-      if (!putRes.ok) throw new Error(`upload_failed_${putRes.status}`);
+      // Same retry posture as the photo flow: don't retry our own 429
+      // on sign (it's the rate limiter), retry transient errors elsewhere.
+      const sign = await withRetry(
+        async () => {
+          const res = await fetch("/api/messages/audio/sign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              eventSlug,
+              clientFingerprint,
+              displayName: displayName?.trim() || null,
+              audioMime: mime,
+              audioSize: blob.size,
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new HttpError(res.status, body.error ?? `sign_failed_${res.status}`);
+          }
+          return (await res.json()) as {
+            messageId: string;
+            eventId: string;
+            guestId: string;
+            storagePath: string;
+            signedUrl: string;
+          };
+        },
+        (err) =>
+          err instanceof HttpError
+            ? err.status !== 429 && isRetryableStatus(err.status)
+            : true,
+      );
 
-      const finalizeRes = await fetch("/api/messages/audio/finalize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messageId: sign.messageId,
-          eventId: sign.eventId,
-          guestId: sign.guestId,
-          storagePath: sign.storagePath,
-          audioSize: blob.size,
-        }),
-      });
-      if (!finalizeRes.ok) {
-        const body = await finalizeRes.json().catch(() => ({}));
-        throw new Error(body.error ?? `finalize_failed_${finalizeRes.status}`);
-      }
+      await withRetry(
+        async () => {
+          const res = await fetch(sign.signedUrl, {
+            method: "PUT",
+            headers: { "Content-Type": mime, "x-upsert": "false" },
+            body: blob,
+          });
+          if (!res.ok) throw new HttpError(res.status, `upload_failed_${res.status}`);
+        },
+        (err) =>
+          err instanceof HttpError ? isRetryableStatus(err.status) : true,
+      );
+
+      await withRetry(
+        async () => {
+          const res = await fetch("/api/messages/audio/finalize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messageId: sign.messageId,
+              eventId: sign.eventId,
+              guestId: sign.guestId,
+              storagePath: sign.storagePath,
+              audioSize: blob.size,
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new HttpError(res.status, body.error ?? `finalize_failed_${res.status}`);
+          }
+        },
+        (err) =>
+          err instanceof HttpError ? isRetryableStatus(err.status) : true,
+      );
 
       setPhase("done");
       onSent();
