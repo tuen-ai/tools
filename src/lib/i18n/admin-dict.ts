@@ -196,7 +196,7 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
 
     uploadsOpen: "開放上傳中",
     uploadsClosed: "上傳已關閉",
-    navSlideshow: "▶ 投影模式",
+    navSlideshow: "投影模式",
     navSlideshowTitle: "新分頁開啟投影模式 — 投放去婚宴投影機",
     navDownloadAll: "全部下載",
     navDownloadAllTitle: "下載所有可見相片(ZIP)",
@@ -223,7 +223,7 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     gridEmptyFiltered: "呢張枱暫時未有相片。",
     tileNew: "新到",
     tileHidden: "已隱藏",
-    tileVideo: "▶ 短片",
+    tileVideo: "短片",
     modalDownload: "下載",
     modalHide: "隱藏",
     modalUnhide: "取消隱藏",
@@ -350,7 +350,7 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
 
     uploadsOpen: "Uploads open",
     uploadsClosed: "Uploads closed",
-    navSlideshow: "▶ Slideshow",
+    navSlideshow: "Slideshow",
     navSlideshowTitle:
       "Open slideshow in a new tab — mirror to your venue projector",
     navDownloadAll: "Download all",
@@ -378,7 +378,7 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     gridEmptyFiltered: "No photos from this table yet.",
     tileNew: "New",
     tileHidden: "Hidden",
-    tileVideo: "▶ Video",
+    tileVideo: "Video",
     modalDownload: "Download",
     modalHide: "Hide",
     modalUnhide: "Unhide",

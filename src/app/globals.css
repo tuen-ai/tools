@@ -12,6 +12,27 @@
   }
   body {
     @apply bg-cream-50 text-ink-900 font-sans;
+    /* A whisper of warmth so large cream areas don't read as flat #FBF8F3. */
+    background-image: radial-gradient(
+      120% 80% at 50% -10%,
+      rgba(232, 180, 184, 0.1) 0%,
+      transparent 60%
+    );
+    background-attachment: fixed;
+  }
+
+  /* Keyboard focus: a soft blush ring on anything interactive. Mouse
+     clicks don't trigger :focus-visible, so this stays invisible to
+     pointer users while giving keyboard users a clear, on-brand signal. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid theme("colors.blush.500");
+    outline-offset: 2px;
+    border-radius: 0.5rem;
   }
 }
 
@@ -75,4 +96,21 @@
   height: 14px;
   border-radius: 2px;
   animation: confetti-fall 2.4s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+}
+
+/* Respect the OS "reduce motion" setting: collapse every animation /
+   transition to a near-instant fade so motion-sensitive guests aren't
+   subjected to Ken Burns pans, confetti, or pop scaling. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .confetti-piece {
+    display: none !important;
+  }
 }

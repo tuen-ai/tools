@@ -16,6 +16,13 @@ import {
 } from "@/lib/upload/client-upload";
 import { DICT, type Lang } from "@/lib/i18n";
 import { AudioRecorder } from "@/components/guest/audio-recorder";
+import {
+  CameraIcon,
+  MicIcon,
+  PencilIcon,
+  PlayIcon,
+  HeartGiftIcon,
+} from "@/components/ui/icons";
 
 const FP_KEY = "wgp.fingerprint";
 const NAME_KEY = "wgp.name";
@@ -218,24 +225,26 @@ export function UploadClient({
             <button
               type="button"
               onClick={() => setMessageMode("text")}
-              className={`px-2.5 py-1 rounded-md transition ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
                 messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
               }`}
               role="tab"
               aria-selected={messageMode === "text"}
             >
-              ✏️ {lang === "zh-Hant" ? "文字" : "Text"}
+              <PencilIcon className="h-3.5 w-3.5" />
+              {lang === "zh-Hant" ? "文字" : "Text"}
             </button>
             <button
               type="button"
               onClick={() => setMessageMode("voice")}
-              className={`px-2.5 py-1 rounded-md transition ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
                 messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
               }`}
               role="tab"
               aria-selected={messageMode === "voice"}
             >
-              🎤 {lang === "zh-Hant" ? "語音" : "Voice"}
+              <MicIcon className="h-3.5 w-3.5" />
+              {lang === "zh-Hant" ? "語音" : "Voice"}
             </button>
           </div>
         </div>
@@ -286,8 +295,8 @@ export function UploadClient({
           htmlFor="wgp-file-input"
           className="block cursor-pointer rounded-2xl border-2 border-dashed border-blush-400 bg-blush-400/10 px-6 py-10 text-center transition hover:bg-blush-400/15"
         >
-          <div className="text-3xl mb-2" aria-hidden>
-            📸
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blush-400/15 text-blush-600">
+            <CameraIcon className="h-6 w-6" />
           </div>
           <div className="font-serif text-lg text-ink-900">
             {t.choosePhotos}
@@ -390,8 +399,8 @@ function Thumb({ file }: { file: File }) {
         <video src={url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
       ) : null}
       {isVideo ? (
-        <span className="absolute inset-0 flex items-center justify-center bg-ink-900/30 text-white text-[10px]" aria-hidden>
-          ▶
+        <span className="absolute inset-0 flex items-center justify-center bg-ink-900/30 text-white">
+          <PlayIcon className="h-4 w-4" />
         </span>
       ) : null}
     </div>
@@ -475,8 +484,17 @@ function ThankYou({
     <>
       {showConfetti ? <Confetti /> : null}
       <div className="bg-white rounded-3xl shadow-soft p-8 text-center animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]">
-        <div className="text-6xl mb-4 inline-block animate-[pop_700ms_cubic-bezier(0.2,0.8,0.4,1)_both]" aria-hidden>
-          💝
+        <div
+          className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full animate-[pop_700ms_cubic-bezier(0.2,0.8,0.4,1)_both]"
+          style={
+            primaryColor
+              ? { backgroundColor: `${primaryColor}1f`, color: primaryColor }
+              : undefined
+          }
+        >
+          <HeartGiftIcon
+            className={`h-8 w-8 ${primaryColor ? "" : "text-blush-500"}`}
+          />
         </div>
         <h2 className="font-serif text-2xl text-ink-900 mb-2">{t.thanksTitle}</h2>
         <p className="text-ink-700 text-sm leading-relaxed mb-6">

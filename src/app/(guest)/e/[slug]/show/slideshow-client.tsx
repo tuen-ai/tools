@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DICT, type Lang } from "@/lib/i18n";
+import { SparkleIcon } from "@/components/ui/icons";
 
 export interface Slide {
   id: string;
@@ -186,7 +187,8 @@ export function SlideshowClient({
       {/* Toast for new uploads */}
       {newCount > 0 ? (
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 animate-[slidedown_500ms_ease-out]">
-          <div className="rounded-full bg-blush-500/90 text-white px-5 py-2 text-sm font-medium shadow-soft backdrop-blur">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-blush-500/90 text-white px-5 py-2 text-sm font-medium shadow-soft backdrop-blur">
+            <SparkleIcon className="h-4 w-4" />
             {t.slideshowNewToast(newCount)}
           </div>
         </div>

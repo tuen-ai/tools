@@ -10,6 +10,7 @@ import { listTables } from "@/lib/db/tables";
 import { env } from "@/lib/env";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
+import { TableIcon } from "@/components/ui/icons";
 import { CreateTableForm } from "./create-form";
 import { DeleteTableButton } from "./delete-button";
 
@@ -75,7 +76,9 @@ export default async function TablesPage({ params }: Props) {
 
       {tables.length === 0 ? (
         <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center mt-6 print:hidden">
-          <div className="text-4xl mb-3" aria-hidden>🪑</div>
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-cream-100 text-ink-500">
+            <TableIcon className="h-6 w-6" />
+          </div>
           <p className="text-ink-500 text-sm">{t.tablesEmpty}</p>
         </div>
       ) : (

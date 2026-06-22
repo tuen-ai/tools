@@ -6,6 +6,15 @@ import type { Database, MediaStatus } from "@/types/database";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { ADMIN_DICT, type AdminDict } from "@/lib/i18n/admin-dict";
 import type { Lang } from "@/lib/i18n";
+import {
+  CameraIcon,
+  PlayIcon,
+  TableIcon,
+  DownloadIcon,
+  EyeOffIcon,
+  CheckIcon,
+  TrashIcon,
+} from "@/components/ui/icons";
 import { setMediaStatusAction } from "./actions";
 
 type MediaRow = Database["public"]["Tables"]["media"]["Row"];
@@ -193,7 +202,8 @@ export function MediaGrid({
           {tables.map((tb) => (
             <FilterChip
               key={tb.id}
-              label={`🪑 ${tb.label}`}
+              label={tb.label}
+              withIcon
               active={tableFilter === tb.id}
               disabled={filterLoading}
               onClick={() => applyFilter(tb.id)}
@@ -204,8 +214,8 @@ export function MediaGrid({
 
       {visibleRows.length === 0 ? (
         <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center">
-          <div className="text-4xl mb-3" aria-hidden>
-            📷
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-cream-100 text-ink-500">
+            <CameraIcon className="h-6 w-6" />
           </div>
           <p className="text-ink-500 text-sm">
             {tableFilter ? t.gridEmptyFiltered : t.gridEmpty}
@@ -289,11 +299,13 @@ function LiveBadge({
 
 function FilterChip({
   label,
+  withIcon,
   active,
   disabled,
   onClick,
 }: {
   label: string;
+  withIcon?: boolean;
   active: boolean;
   disabled: boolean;
   onClick: () => void;
@@ -304,12 +316,13 @@ function FilterChip({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={active}
-      className={`rounded-full px-3.5 py-1.5 text-xs transition disabled:opacity-60 ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs transition disabled:opacity-60 ${
         active
           ? "bg-ink-900 text-white"
           : "border border-cream-200 bg-white text-ink-700 hover:border-blush-400"
       }`}
     >
+      {withIcon ? <TableIcon className="h-3.5 w-3.5" /> : null}
       {label}
     </button>
   );
@@ -383,13 +396,15 @@ function MediaTile({
       </button>
 
       {isVideo ? (
-        <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5 pointer-events-none">
+        <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5 pointer-events-none">
+          <PlayIcon className="h-3 w-3" />
           {t.tileVideo}
         </span>
       ) : null}
       {tableLabel ? (
-        <span className="absolute bottom-2 right-2 text-[10px] bg-white/85 text-ink-700 rounded px-1.5 py-0.5 pointer-events-none backdrop-blur-sm">
-          🪑 {tableLabel}
+        <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 text-[10px] bg-white/85 text-ink-700 rounded px-1.5 py-0.5 pointer-events-none backdrop-blur-sm">
+          <TableIcon className="h-3 w-3" />
+          {tableLabel}
         </span>
       ) : null}
       {row.status === "hidden" ? (
@@ -432,8 +447,9 @@ function MediaTile({
             <div className="mt-4 grid grid-cols-3 gap-2">
               <a
                 href={`/api/admin/media/${row.id}/url`}
-                className="rounded-xl bg-cream-100 px-3 py-2.5 text-center text-sm hover:bg-cream-200 transition"
+                className="inline-flex flex-col items-center gap-1 rounded-xl bg-cream-100 px-3 py-2.5 text-center text-sm hover:bg-cream-200 transition"
               >
+                <DownloadIcon className="h-4 w-4" />
                 {t.modalDownload}
               </a>
               {row.status === "visible" ? (
@@ -441,8 +457,9 @@ function MediaTile({
                   type="button"
                   onClick={() => run("hidden")}
                   disabled={pending}
-                  className="rounded-xl bg-cream-100 px-3 py-2.5 text-sm hover:bg-cream-200 disabled:opacity-60 transition"
+                  className="inline-flex flex-col items-center gap-1 rounded-xl bg-cream-100 px-3 py-2.5 text-sm hover:bg-cream-200 disabled:opacity-60 transition"
                 >
+                  <EyeOffIcon className="h-4 w-4" />
                   {t.modalHide}
                 </button>
               ) : (
@@ -450,8 +467,9 @@ function MediaTile({
                   type="button"
                   onClick={() => run("visible")}
                   disabled={pending}
-                  className="rounded-xl bg-cream-100 px-3 py-2.5 text-sm hover:bg-cream-200 disabled:opacity-60 transition"
+                  className="inline-flex flex-col items-center gap-1 rounded-xl bg-cream-100 px-3 py-2.5 text-sm hover:bg-cream-200 disabled:opacity-60 transition"
                 >
+                  <CheckIcon className="h-4 w-4" />
                   {t.modalUnhide}
                 </button>
               )}
@@ -459,8 +477,9 @@ function MediaTile({
                 type="button"
                 onClick={() => run("deleted")}
                 disabled={pending}
-                className="rounded-xl bg-blush-400/15 text-blush-600 px-3 py-2.5 text-sm hover:bg-blush-400/25 disabled:opacity-60 transition"
+                className="inline-flex flex-col items-center gap-1 rounded-xl bg-blush-400/15 text-blush-600 px-3 py-2.5 text-sm hover:bg-blush-400/25 disabled:opacity-60 transition"
               >
+                <TrashIcon className="h-4 w-4" />
                 {t.modalDelete}
               </button>
             </div>

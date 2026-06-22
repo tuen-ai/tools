@@ -8,8 +8,17 @@ import { listMessagesPage } from "@/lib/db/messages";
 import { listTables } from "@/lib/db/tables";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
+import {
+  CameraIcon,
+  GlassIcon,
+  EnvelopeIcon,
+  TableIcon,
+  PlayIcon,
+} from "@/components/ui/icons";
 import { MediaGrid } from "./media-grid";
 import { MessagesPanel } from "./messages-panel";
+
+type StatIcon = typeof CameraIcon;
 
 const PAGE_SIZE = 60;
 const MESSAGE_LIMIT = 50;
@@ -40,11 +49,11 @@ export default async function EventDashboardPage({ params }: Props) {
   const signed = await signThumbnailUrls(admin, page.rows);
   const thumbMap = new Map(signed.map((s) => [s.id, s.url]));
 
-  const statItems = [
-    { label: t.statPhotos, value: page.total, icon: "📷" },
-    { label: t.statGuests, value: stats.guests, icon: "🥂" },
-    { label: t.statMessages, value: stats.messages, icon: "💌" },
-    { label: t.statTables, value: tables.length, icon: "🪑" },
+  const statItems: { label: string; value: number; Icon: StatIcon }[] = [
+    { label: t.statPhotos, value: page.total, Icon: CameraIcon },
+    { label: t.statGuests, value: stats.guests, Icon: GlassIcon },
+    { label: t.statMessages, value: stats.messages, Icon: EnvelopeIcon },
+    { label: t.statTables, value: tables.length, Icon: TableIcon },
   ];
 
   return (
@@ -63,9 +72,10 @@ export default async function EventDashboardPage({ params }: Props) {
           <Link
             href={`/e/${event.slug}/show`}
             target="_blank"
-            className="rounded-lg bg-ink-900 text-white px-3 py-2 hover:bg-ink-700 transition"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-ink-900 text-white px-3 py-2 hover:bg-ink-700 transition"
             title={t.navSlideshowTitle}
           >
+            <PlayIcon className="h-4 w-4" />
             {t.navSlideshow}
           </Link>
           <a
@@ -103,19 +113,19 @@ export default async function EventDashboardPage({ params }: Props) {
       </header>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {statItems.map((s) => (
+        {statItems.map(({ label, value, Icon }) => (
           <div
-            key={s.label}
+            key={label}
             className="bg-white rounded-2xl border border-cream-200 px-4 py-3 flex items-center gap-3"
           >
-            <span className="text-xl" aria-hidden>
-              {s.icon}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blush-400/12 text-blush-600">
+              <Icon className="h-[18px] w-[18px]" />
             </span>
             <div className="min-w-0">
               <p className="font-serif text-xl text-ink-900 leading-tight">
-                {s.value}
+                {value}
               </p>
-              <p className="text-[11px] text-ink-500">{s.label}</p>
+              <p className="text-[11px] text-ink-500">{label}</p>
             </div>
           </div>
         ))}

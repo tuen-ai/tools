@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listAdminEvents } from "@/lib/db/events";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT, type AdminDict } from "@/lib/i18n/admin-dict";
+import { RingsIcon } from "@/components/ui/icons";
 
 export default async function AdminEventsPage() {
   const supabase = await createSupabaseServerClient();
@@ -71,8 +72,8 @@ function StatusPill({ enabled, t }: { enabled: boolean; t: AdminDict }) {
 function EmptyState({ t }: { t: AdminDict }) {
   return (
     <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center">
-      <div className="text-4xl mb-3" aria-hidden>
-        💍
+      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blush-400/15 text-blush-600">
+        <RingsIcon className="h-7 w-7" />
       </div>
       <h2 className="font-serif text-xl text-ink-900 mb-2">
         {t.eventsEmptyTitle}
