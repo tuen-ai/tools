@@ -49,11 +49,16 @@ export default async function EventDashboardPage({ params }: Props) {
   const signed = await signThumbnailUrls(admin, page.rows);
   const thumbMap = new Map(signed.map((s) => [s.id, s.url]));
 
-  const statItems: { label: string; value: number; Icon: StatIcon }[] = [
-    { label: t.statPhotos, value: page.total, Icon: CameraIcon },
-    { label: t.statGuests, value: stats.guests, Icon: GlassIcon },
-    { label: t.statMessages, value: stats.messages, Icon: EnvelopeIcon },
-    { label: t.statTables, value: tables.length, Icon: TableIcon },
+  const statItems: {
+    label: string;
+    value: number;
+    Icon: StatIcon;
+    tint: string;
+  }[] = [
+    { label: t.statPhotos, value: page.total, Icon: CameraIcon, tint: "bg-blush-500/12 text-blush-600" },
+    { label: t.statGuests, value: stats.guests, Icon: GlassIcon, tint: "bg-peach-soft text-peach-deep" },
+    { label: t.statMessages, value: stats.messages, Icon: EnvelopeIcon, tint: "bg-sage-500/25 text-sage-600" },
+    { label: t.statTables, value: tables.length, Icon: TableIcon, tint: "bg-lav-soft text-lav-deep" },
   ];
 
   return (
@@ -113,12 +118,12 @@ export default async function EventDashboardPage({ params }: Props) {
       </header>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {statItems.map(({ label, value, Icon }) => (
+        {statItems.map(({ label, value, Icon, tint }) => (
           <div
             key={label}
             className="bg-white rounded-2xl border border-cream-200 px-4 py-3 flex items-center gap-3"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blush-400/12 text-blush-600">
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${tint}`}>
               <Icon className="h-[18px] w-[18px]" />
             </span>
             <div className="min-w-0">

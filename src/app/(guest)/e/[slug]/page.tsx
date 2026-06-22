@@ -7,6 +7,7 @@ import { signOriginalUrl } from "@/lib/db/media";
 import { DICT } from "@/lib/i18n";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { LanguageSwitch } from "@/lib/i18n/language-switch";
+import { GuestScatter } from "@/components/guest/scatter";
 import { UploadClient } from "./upload-client";
 import { ClosedScreen } from "./closed";
 
@@ -77,8 +78,9 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
   }
 
   return (
-    <main className="min-h-dvh flex flex-col items-center px-5 py-8 sm:py-12">
-      <div className="w-full max-w-md animate-[fadeup_500ms_ease-out]">
+    <main className="relative min-h-dvh flex flex-col items-center px-5 py-8 sm:py-12 overflow-hidden">
+      <GuestScatter />
+      <div className="relative z-10 w-full max-w-md animate-[fadeup_500ms_ease-out]">
         {coverUrl ? (
           <div className="mb-6 overflow-hidden rounded-3xl shadow-soft animate-[fadeup_700ms_ease-out]">
             {/* eslint-disable-next-line @next/next/no-img-element */}

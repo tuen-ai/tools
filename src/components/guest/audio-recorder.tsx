@@ -235,8 +235,8 @@ export function AudioRecorder({
           onClick={startRecording}
           className={
             primaryColor
-              ? "w-full rounded-xl px-4 py-4 text-white text-sm font-medium hover:brightness-90 transition flex items-center justify-center gap-2"
-              : "w-full rounded-xl bg-blush-500 px-4 py-4 text-white text-sm font-medium hover:bg-blush-600 transition flex items-center justify-center gap-2"
+              ? "w-full rounded-full px-4 py-4 text-white text-sm font-medium hover:brightness-90 transition flex items-center justify-center gap-2"
+              : "w-full btn-candy px-4 py-4 text-sm flex items-center justify-center gap-2"
           }
           style={primaryStyle}
         >
@@ -264,7 +264,7 @@ export function AudioRecorder({
           <button
             type="button"
             onClick={stopRecording}
-            className="rounded-xl bg-ink-900 px-5 py-2.5 text-white text-sm font-medium hover:bg-ink-700 transition"
+            className="btn-candy px-5 py-2.5 text-sm"
           >
             {lang === "zh-Hant" ? "停止" : "Stop"}
           </button>
@@ -283,7 +283,7 @@ export function AudioRecorder({
             <button
               type="button"
               onClick={discard}
-              className="flex-1 rounded-xl bg-cream-100 px-4 py-3 text-sm text-ink-700 hover:bg-cream-200 transition"
+              className="flex-1 btn-soft px-4 py-3 text-sm"
             >
               {lang === "zh-Hant" ? "重新錄製" : "Re-record"}
             </button>
@@ -292,8 +292,8 @@ export function AudioRecorder({
               onClick={send}
               className={
                 primaryColor
-                  ? "flex-1 rounded-xl px-4 py-3 text-white text-sm font-medium hover:brightness-90 transition"
-                  : "flex-1 rounded-xl bg-blush-500 px-4 py-3 text-white text-sm font-medium hover:bg-blush-600 transition"
+                  ? "flex-1 rounded-full px-4 py-3 text-white text-sm font-medium hover:brightness-90 transition"
+                  : "flex-1 btn-candy px-4 py-3 text-sm"
               }
               style={primaryStyle}
             >

@@ -75,7 +75,7 @@ export function NewEventForm({ lang }: { lang: Lang }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-xl bg-ink-900 px-4 py-3 text-white text-sm font-medium hover:bg-ink-700 disabled:opacity-60 transition"
+        className="w-full btn-candy px-4 py-3 text-sm"
       >
         {pending ? t.createEventPending : t.createEventCta}
       </button>

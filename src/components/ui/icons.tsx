@@ -135,6 +135,24 @@ export function HeartGiftIcon(props: IconProps) {
   );
 }
 
+/** Solid heart — decorative scatter / confetti. */
+export function HeartFilledIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-5 w-5" {...props}>
+      <path d="M12 20.4S3.6 15.3 3.6 9.6A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 8.4 2.3c0 5.7-8.4 10.8-8.4 10.8z" />
+    </svg>
+  );
+}
+
+/** Solid star — decorative scatter. */
+export function StarFilledIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-5 w-5" {...props}>
+      <path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5 6.9 19.2l1-5.7-4.1-4 5.7-.8z" />
+    </svg>
+  );
+}
+
 export function CheckIcon(props: IconProps) {
   return (
     <Base {...props}>

@@ -45,7 +45,7 @@ export function CreateTableForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-xl bg-ink-900 px-4 py-2.5 text-white text-sm font-medium hover:bg-ink-700 disabled:opacity-60 transition"
+          className="btn-candy px-4 py-2.5 text-sm"
         >
           {pending ? t.addTablePending : t.addTableCta}
         </button>

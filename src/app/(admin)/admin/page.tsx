@@ -20,7 +20,7 @@ export default async function AdminEventsPage() {
         <h1 className="font-serif text-2xl text-ink-900">{t.yourEvents}</h1>
         <Link
           href="/admin/new"
-          className="rounded-xl bg-blush-500 px-4 py-2 text-white text-sm font-medium hover:bg-blush-600 transition"
+          className="btn-candy px-4 py-2 text-sm"
         >
           {t.newEventCta}
         </Link>
@@ -81,7 +81,7 @@ function EmptyState({ t }: { t: AdminDict }) {
       <p className="text-ink-500 text-sm mb-6">{t.eventsEmptyBody}</p>
       <Link
         href="/admin/new"
-        className="inline-block rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium hover:bg-blush-600 transition"
+        className="inline-block btn-candy px-5 py-3 text-sm"
       >
         {t.eventsEmptyCta}
       </Link>

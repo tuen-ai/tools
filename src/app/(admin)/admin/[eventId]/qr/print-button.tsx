@@ -9,7 +9,7 @@ export function PrintButton({ lang }: { lang: Lang }) {
     <button
       type="button"
       onClick={() => window.print()}
-      className="rounded-xl bg-ink-900 px-4 py-2 text-white text-sm font-medium hover:bg-ink-700 transition"
+      className="btn-candy px-4 py-2 text-sm"
     >
       {t.printCta}
     </button>

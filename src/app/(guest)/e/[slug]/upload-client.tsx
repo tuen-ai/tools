@@ -21,7 +21,7 @@ import {
   MicIcon,
   PencilIcon,
   PlayIcon,
-  HeartGiftIcon,
+  HeartFilledIcon,
 } from "@/components/ui/icons";
 
 const FP_KEY = "wgp.fingerprint";
@@ -75,8 +75,8 @@ export function UploadClient({
 }: Props) {
   const t = DICT[lang];
   const primaryButtonClass = primaryColor
-    ? "flex-1 rounded-xl px-4 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed transition"
-    : "flex-1 rounded-xl bg-blush-500 px-4 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 disabled:opacity-60 disabled:cursor-not-allowed transition";
+    ? "flex-1 rounded-full px-4 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed transition"
+    : "flex-1 btn-candy px-4 py-3 text-sm";
   const primaryButtonStyle = primaryColor
     ? { backgroundColor: primaryColor }
     : undefined;
@@ -295,8 +295,8 @@ export function UploadClient({
           htmlFor="wgp-file-input"
           className="block cursor-pointer rounded-2xl border-2 border-dashed border-blush-400 bg-blush-400/10 px-6 py-10 text-center transition hover:bg-blush-400/15"
         >
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blush-400/15 text-blush-600">
-            <CameraIcon className="h-6 w-6" />
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white text-blush-500 shadow-soft animate-[bob_2.6s_ease-in-out_infinite]">
+            <CameraIcon className="h-7 w-7" />
           </div>
           <div className="font-serif text-lg text-ink-900">
             {t.choosePhotos}
@@ -312,7 +312,7 @@ export function UploadClient({
             {!isUploading ? (
               <label
                 htmlFor="wgp-file-input"
-                className="flex-1 cursor-pointer rounded-xl bg-cream-100 px-4 py-3 text-center text-sm text-ink-700 hover:bg-cream-200 transition"
+                className="flex-1 cursor-pointer btn-soft px-4 py-3 text-center text-sm"
               >
                 {t.changePhotos}
               </label>
@@ -429,10 +429,10 @@ function StatusBadge({ status }: { status: UploadItem["status"] }) {
   );
 }
 
+// Candy confetti — strawberry, peach, butter, mint, lavender, sky.
 const CONFETTI_COLORS = [
-  "#D9989E", "#E8B4B8", "#C77B82",
-  "#8AA088", "#6E8A6C",
-  "#F5EFE6", "#EADFD0",
+  "#FF8FA3", "#FFB9C8", "#FFC9A8",
+  "#FFE08A", "#A8E0C8", "#CDBDF0", "#AFD4F2",
 ];
 
 function Confetti({ count = 32 }: { count?: number }) {
@@ -485,15 +485,15 @@ function ThankYou({
       {showConfetti ? <Confetti /> : null}
       <div className="bg-white rounded-3xl shadow-soft p-8 text-center animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]">
         <div
-          className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full animate-[pop_700ms_cubic-bezier(0.2,0.8,0.4,1)_both]"
+          className="mx-auto mb-4 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full animate-[bob_2.6s_ease-in-out_infinite]"
           style={
             primaryColor
               ? { backgroundColor: `${primaryColor}1f`, color: primaryColor }
               : undefined
           }
         >
-          <HeartGiftIcon
-            className={`h-8 w-8 ${primaryColor ? "" : "text-blush-500"}`}
+          <HeartFilledIcon
+            className={`h-9 w-9 ${primaryColor ? "" : "text-blush-500"}`}
           />
         </div>
         <h2 className="font-serif text-2xl text-ink-900 mb-2">{t.thanksTitle}</h2>
@@ -506,8 +506,8 @@ function ThankYou({
           onClick={onAddMore}
           className={
             primaryColor
-              ? "rounded-xl px-5 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 transition"
-              : "rounded-xl bg-blush-500 px-5 py-3 text-white text-sm font-medium shadow-soft hover:bg-blush-600 transition"
+              ? "rounded-full px-5 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 transition"
+              : "btn-candy px-5 py-3 text-sm"
           }
           style={primaryColor ? { backgroundColor: primaryColor } : undefined}
         >
