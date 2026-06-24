@@ -22,6 +22,7 @@ import {
   PencilIcon,
   PlayIcon,
   HeartFilledIcon,
+  CheckIcon,
 } from "@/components/ui/icons";
 
 const FP_KEY = "wgp.fingerprint";
@@ -199,7 +200,7 @@ export function UploadClient({
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">
           {t.yourName}{" "}
-          <span className="text-ink-500 font-normal">{t.optional}</span>
+          <span className="text-ink-700 font-normal">{t.optional}</span>
         </span>
         <input
           type="text"
@@ -216,7 +217,7 @@ export function UploadClient({
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm text-ink-700 font-medium">
             {t.messageLabel}{" "}
-            <span className="text-ink-500 font-normal">{t.optional}</span>
+            <span className="text-ink-700 font-normal">{t.optional}</span>
           </span>
           <div
             className="inline-flex rounded-lg bg-cream-100 p-0.5 text-[11px]"
@@ -226,25 +227,25 @@ export function UploadClient({
               type="button"
               onClick={() => setMessageMode("text")}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
-                messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
+                messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
               }`}
               role="tab"
               aria-selected={messageMode === "text"}
             >
               <PencilIcon className="h-3.5 w-3.5" />
-              {lang === "zh-Hant" ? "文字" : "Text"}
+              {t.msgModeText}
             </button>
             <button
               type="button"
               onClick={() => setMessageMode("voice")}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
-                messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
+                messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
               }`}
               role="tab"
               aria-selected={messageMode === "voice"}
             >
               <MicIcon className="h-3.5 w-3.5" />
-              {lang === "zh-Hant" ? "語音" : "Voice"}
+              {t.msgModeVoice}
             </button>
           </div>
         </div>
@@ -270,10 +271,8 @@ export function UploadClient({
           />
         )}
         {messageMode === "voice" && voiceSent > 0 ? (
-          <p className="mt-2 text-[11px] text-sage-600 text-center">
-            {lang === "zh-Hant"
-              ? `已送出 ${voiceSent} 段語音留言`
-              : `${voiceSent} voice message${voiceSent === 1 ? "" : "s"} sent`}
+          <p className="mt-2 text-[11px] text-sage-700 text-center">
+            {t.voiceSent(voiceSent)}
           </p>
         ) : null}
       </div>
@@ -301,7 +300,7 @@ export function UploadClient({
           <div className="font-serif text-lg text-ink-900">
             {t.choosePhotos}
           </div>
-          <div className="text-xs text-ink-500 mt-1">
+          <div className="text-xs text-ink-700 mt-1">
             {t.chooseHelp(MAX_FILES_PER_REQUEST)}
           </div>
         </label>
@@ -333,12 +332,12 @@ export function UploadClient({
       )}
 
       {batchError ? (
-        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
+        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700">
           {batchError}
         </div>
       ) : null}
 
-      <p className="text-[11px] text-ink-500 text-center leading-relaxed">
+      <p className="text-[11px] text-ink-700 text-center leading-relaxed">
         {t.privacyNote(maxPerGuest)}
       </p>
     </div>
@@ -369,7 +368,7 @@ function FileList({ items }: { items: UploadItem[] }) {
               />
             </div>
             {it.status === "failed" && it.error ? (
-              <div className="mt-1 text-[11px] text-blush-600 truncate">
+              <div className="mt-1 text-[11px] text-blush-700 truncate">
                 {it.error}
               </div>
             ) : null}
@@ -408,24 +407,29 @@ function Thumb({ file }: { file: File }) {
 }
 
 function StatusBadge({ status }: { status: UploadItem["status"] }) {
-  const label =
-    status === "done"
-      ? "✓"
-      : status === "failed"
-        ? "!"
-        : status === "uploading"
-          ? "…"
-          : "•";
-  const cls =
-    status === "done"
-      ? "text-sage-600"
-      : status === "failed"
-        ? "text-blush-600"
-        : "text-ink-500";
+  // Done uses the line-icon check (consistent with the rest of the app and
+  // stable across OSes, unlike a ✓ glyph); the other states are small
+  // colour-coded dots — uploading pulses, pending is muted, failed is a
+  // solid raspberry dot.
+  if (status === "done") {
+    return (
+      <span role="img" aria-label={status} className="text-sage-700">
+        <CheckIcon className="h-4 w-4" />
+      </span>
+    );
+  }
+  const dotCls =
+    status === "failed"
+      ? "bg-blush-700"
+      : status === "uploading"
+        ? "bg-blush-500 animate-pulse"
+        : "bg-ink-500";
   return (
-    <span className={`text-sm ${cls}`} aria-label={status}>
-      {label}
-    </span>
+    <span
+      role="img"
+      aria-label={status}
+      className={`inline-block h-2.5 w-2.5 rounded-full ${dotCls}`}
+    />
   );
 }
 

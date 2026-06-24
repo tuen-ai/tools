@@ -159,6 +159,9 @@ export interface AdminDict {
   errSignupsClosed: string;
   errSignupValidation: string;
   errInvalidInvite: string;
+  errEmailInUse: string;
+  errRateLimited: string;
+  errAuthFailed: string;
   errCheckEmail: string;
   errCoverNoFile: string;
   errCoverUnsupported: string;
@@ -307,11 +310,14 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     errNotFound: "找不到。",
     errForbidden: "冇權限。",
     errNotSignedIn: "請先登入。",
-    errInvalidCredentials: "請輸入有效嘅電郵同密碼。",
+    errInvalidCredentials: "電郵或密碼錯誤。",
     errSignupsClosed:
       "註冊已關閉。請聯絡現有管理員加你入去,或設定 ADMIN_SIGNUP_INVITE_CODE。",
     errSignupValidation: "電郵、密碼(8+ 字)同邀請碼三樣都必須填。",
     errInvalidInvite: "邀請碼錯誤。",
+    errEmailInUse: "呢個電郵已經註冊咗,請直接登入。",
+    errRateLimited: "嘗試太頻密,請稍後再試。",
+    errAuthFailed: "登入失敗,請稍後再試。",
     errCheckEmail: "請查看電郵確認帳號,然後返嚟登入。",
     errCoverNoFile: "請揀一個檔案。",
     errCoverUnsupported: "唔支援呢種格式。",
@@ -468,12 +474,15 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     errNotFound: "Not found.",
     errForbidden: "Forbidden.",
     errNotSignedIn: "Please sign in first.",
-    errInvalidCredentials: "Please enter a valid email and password.",
+    errInvalidCredentials: "Email or password is incorrect.",
     errSignupsClosed:
       "Signups are closed. Ask an existing admin to add you, or have them set ADMIN_SIGNUP_INVITE_CODE.",
     errSignupValidation:
       "Email, password (8+ chars), and invite code are all required.",
     errInvalidInvite: "Invalid invite code.",
+    errEmailInUse: "That email is already registered — please sign in instead.",
+    errRateLimited: "Too many attempts. Please try again in a moment.",
+    errAuthFailed: "Sign-in failed. Please try again.",
     errCheckEmail: "Check your email to confirm your account, then sign in.",
     errCoverNoFile: "Please choose a file.",
     errCoverUnsupported: "Unsupported file format.",
@@ -500,6 +509,9 @@ const ERR_KEY_MAP: Record<string, keyof AdminDict> = {
   err_signups_closed: "errSignupsClosed",
   err_signup_validation: "errSignupValidation",
   err_invalid_invite: "errInvalidInvite",
+  err_email_in_use: "errEmailInUse",
+  err_rate_limited: "errRateLimited",
+  err_auth_failed: "errAuthFailed",
   err_check_email: "errCheckEmail",
   err_cover_no_file: "errCoverNoFile",
   no_file: "errCoverNoFile",

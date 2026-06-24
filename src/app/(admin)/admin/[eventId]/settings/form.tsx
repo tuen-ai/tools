@@ -5,12 +5,15 @@ import { useActionState, useEffect, useState } from "react";
 import type { Database } from "@/types/database";
 import { ADMIN_DICT, lookupAdminError } from "@/lib/i18n/admin-dict";
 import type { Lang } from "@/lib/i18n";
+import { DEFAULT_PRIMARY_COLOR } from "@/lib/theme";
 import { updateEventAction, type UpdateEventResult } from "./actions";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
 const INITIAL: UpdateEventResult = { ok: true };
-const DEFAULT_PRIMARY = "#D9989E";
+// Matches the blush-500 the guest page renders when no custom colour is set,
+// so the picker's swatch previews exactly what guests will see.
+const DEFAULT_PRIMARY = DEFAULT_PRIMARY_COLOR;
 
 function readPrimaryColor(theme: Record<string, unknown> | null): string {
   const v = theme?.["primaryColor"];
@@ -113,7 +116,7 @@ export function SettingsForm({
           <span className="block text-sm font-medium text-ink-900">
             {t.acceptUploads}
           </span>
-          <span className="block text-xs text-ink-500 mt-0.5">
+          <span className="block text-xs text-ink-700 mt-0.5">
             {t.acceptUploadsHint}
           </span>
         </span>
@@ -126,13 +129,13 @@ export function SettingsForm({
             <button
               type="button"
               onClick={() => setPrimaryColor(DEFAULT_PRIMARY)}
-              className="text-[11px] text-ink-500 hover:text-ink-900 transition"
+              className="text-[11px] text-ink-700 hover:text-ink-900 transition"
             >
               {t.primaryColorReset}
             </button>
           ) : null}
         </div>
-        <p className="text-xs text-ink-500 mb-3">{t.primaryColorHint}</p>
+        <p className="text-xs text-ink-700 mb-3">{t.primaryColorHint}</p>
         <div className="flex items-center gap-3">
           <input
             type="color"
@@ -167,11 +170,11 @@ export function SettingsForm({
       </div>
 
       {errMessage ? (
-        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
+        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700">
           {errMessage}
         </div>
       ) : showSaved ? (
-        <div className="rounded-xl bg-sage-500/15 px-4 py-3 text-sm text-sage-600 animate-[fadein_200ms_ease-out]">
+        <div className="rounded-xl bg-sage-500/15 px-4 py-3 text-sm text-sage-700 animate-[fadein_200ms_ease-out]">
           {t.saved}
         </div>
       ) : null}

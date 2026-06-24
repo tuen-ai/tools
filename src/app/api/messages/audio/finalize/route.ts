@@ -63,6 +63,7 @@ export async function POST(request: Request) {
 
   try {
     const { id } = await insertMessage(admin, {
+      id: parsed.messageId,
       eventId: parsed.eventId,
       guestId: parsed.guestId,
       body: parsed.body ?? null,

@@ -25,7 +25,7 @@ export default async function HomePage({ searchParams }: Props) {
     <main className="min-h-dvh flex flex-col items-center justify-center px-6">
       <div className="max-w-md text-center animate-[fadeup_500ms_ease-out]">
         <h1 className="font-serif text-4xl text-ink-900 mb-3">{t.title}</h1>
-        <p className="text-ink-500">{t.subtitle}</p>
+        <p className="text-ink-700">{t.subtitle}</p>
       </div>
       <div className="mt-10">
         <LanguageSwitch current={lang} basePath="/" />

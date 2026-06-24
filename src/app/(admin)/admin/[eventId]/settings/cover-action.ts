@@ -7,20 +7,15 @@ import { assertEventAdmin, AuthorizationError } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { updateEvent } from "@/lib/db/events";
 import {
-  ALLOWED_IMAGE_MIMES,
   MAX_FILE_SIZE_BYTES,
   STORAGE_BUCKET,
   extForMime,
-  type AllowedImageMime,
+  isImageMime,
 } from "@/lib/upload/constants";
 
 export interface CoverActionResult {
   ok: boolean;
   error?: string;
-}
-
-function isImageMime(s: string): s is AllowedImageMime {
-  return (ALLOWED_IMAGE_MIMES as readonly string[]).includes(s);
 }
 
 export async function uploadCoverAction(

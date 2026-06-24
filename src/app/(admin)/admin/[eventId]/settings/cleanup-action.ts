@@ -60,8 +60,6 @@ export async function cleanupStorageAction(
     storageNames.push(...data.map((d) => d.name));
     if (data.length < PAGE) break;
   }
-  const storagePaths = new Set(storageNames.map((n) => `${folder}/${n}`));
-
   // 2. Fetch all media rows for this event.
   const { data: media, error: mediaErr } = await admin
     .from("media")
@@ -69,11 +67,26 @@ export async function cleanupStorageAction(
     .eq("event_id", eventId);
   if (mediaErr) return { ok: false, error: mediaErr.message };
 
+  // The cover image lives at events/<id>/cover.<ext> and is tracked on the
+  // events row, NOT in media — so it must never be treated as an orphan.
+  const { data: ev } = await admin
+    .from("events")
+    .select("cover_image_path")
+    .eq("id", eventId)
+    .single();
+  const coverPath = ev?.cover_image_path ?? null;
+
   const rowsByPath = new Map((media ?? []).map((m) => [m.storage_path, m]));
 
-  // 3. Orphan: in storage, no DB row.
+  // 3. Orphan: a top-level media object (<uuid>.<ext>) with no DB row.
+  //    Restricting to the media filename shape also skips the "audio"
+  //    subfolder entry and any future non-media object at this prefix.
+  const ORPHAN_RE = /^[0-9a-f-]{36}\.[a-z0-9]+$/i;
   const orphanPaths: string[] = [];
-  for (const path of storagePaths) {
+  for (const name of storageNames) {
+    const path = `${folder}/${name}`;
+    if (path === coverPath) continue;
+    if (!ORPHAN_RE.test(name)) continue;
     if (!rowsByPath.has(path)) orphanPaths.push(path);
   }
 

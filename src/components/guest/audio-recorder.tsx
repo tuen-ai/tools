@@ -114,11 +114,7 @@ export function AudioRecorder({
       }, MAX_DURATION_SEC * 1000);
     } catch {
       setPhase("error");
-      setError(
-        lang === "zh-Hant"
-          ? "無法存取麥克風,請允許瀏覽器使用咪。"
-          : "Microphone access denied. Please grant permission to record.",
-      );
+      setError(t.micDenied);
     }
   }
 
@@ -240,7 +236,7 @@ export function AudioRecorder({
           }
           style={primaryStyle}
         >
-          <RecDot active /> {lang === "zh-Hant" ? "開始錄音" : "Start recording"}
+          <RecDot active /> {t.recStart}
         </button>
       ) : null}
 
@@ -266,7 +262,7 @@ export function AudioRecorder({
             onClick={stopRecording}
             className="btn-candy px-5 py-2.5 text-sm"
           >
-            {lang === "zh-Hant" ? "停止" : "Stop"}
+            {t.recStop}
           </button>
         </div>
       ) : null}
@@ -285,7 +281,7 @@ export function AudioRecorder({
               onClick={discard}
               className="flex-1 btn-soft px-4 py-3 text-sm"
             >
-              {lang === "zh-Hant" ? "重新錄製" : "Re-record"}
+              {t.recRerecord}
             </button>
             <button
               type="button"
@@ -297,7 +293,7 @@ export function AudioRecorder({
               }
               style={primaryStyle}
             >
-              {lang === "zh-Hant" ? "送出" : t.send(1)}
+              {t.recSend}
             </button>
           </div>
         </div>
@@ -310,14 +306,14 @@ export function AudioRecorder({
       ) : null}
 
       {phase === "error" && error ? (
-        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600 mt-3">
+        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700 mt-3">
           {error}
           <button
             type="button"
             onClick={discard}
             className="ml-2 underline"
           >
-            {lang === "zh-Hant" ? "重試" : "Retry"}
+            {t.retry}
           </button>
         </div>
       ) : null}

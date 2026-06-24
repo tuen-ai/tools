@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { signOriginalUrl } from "@/lib/db/media";
 import { env } from "@/lib/env";
+import { DEFAULT_PRIMARY_COLOR, QR_DARK, QR_LIGHT } from "@/lib/theme";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { PosterClient } from "./poster-client";
@@ -26,7 +27,9 @@ async function resolveBaseUrl(): Promise<string> {
 
 function readPrimaryColor(theme: Record<string, unknown> | null): string {
   const v = theme?.["primaryColor"];
-  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : "#C77B82";
+  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)
+    ? v
+    : DEFAULT_PRIMARY_COLOR;
 }
 
 export default async function PosterPage({ params }: Props) {
@@ -50,7 +53,7 @@ export default async function PosterPage({ params }: Props) {
   const qrSvg = await QRCode.toString(url, {
     type: "svg",
     margin: 1,
-    color: { dark: "#2A2622", light: "#FBF8F3" },
+    color: { dark: QR_DARK, light: QR_LIGHT },
     width: 480,
   });
 
@@ -93,7 +96,7 @@ export default async function PosterPage({ params }: Props) {
       <style>{`
         @media print {
           @page { size: A4 portrait; margin: 0; }
-          html, body { background: #FBF8F3 !important; }
+          html, body { background: #FFF6F2 !important; }
         }
       `}</style>
     </div>

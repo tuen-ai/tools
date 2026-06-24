@@ -6,7 +6,10 @@ import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { LanguageSwitch } from "@/lib/i18n/language-switch";
 
-export const metadata = { title: "Admin — 婚禮相片分享" };
+export async function generateMetadata() {
+  const t = ADMIN_DICT[await resolveLangServer()];
+  return { title: t.brand };
+}
 
 export default async function AdminLayout({
   children,
@@ -23,7 +26,7 @@ export default async function AdminLayout({
         <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
           <Link
             href="/admin"
-            className="font-serif text-lg text-ink-900 hover:text-blush-600 transition"
+            className="font-serif text-lg text-ink-900 hover:text-blush-700 transition"
           >
             {t.brand}
           </Link>
@@ -32,7 +35,7 @@ export default async function AdminLayout({
             <form action={signOutAction}>
               <button
                 type="submit"
-                className="text-sm text-ink-500 hover:text-ink-900 transition"
+                className="text-sm text-ink-700 hover:text-ink-900 transition"
               >
                 {t.signOut}
               </button>

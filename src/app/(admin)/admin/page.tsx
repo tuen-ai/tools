@@ -42,9 +42,9 @@ export default async function AdminEventsPage() {
                   </h2>
                   <StatusPill enabled={e.upload_enabled} t={t} />
                 </div>
-                <p className="text-sm text-ink-500 truncate">/e/{e.slug}</p>
+                <p className="text-sm text-ink-700 truncate">/e/{e.slug}</p>
                 {e.event_date ? (
-                  <p className="text-xs text-ink-500 mt-2">{e.event_date}</p>
+                  <p className="text-xs text-ink-700 mt-2">{e.event_date}</p>
                 ) : null}
               </Link>
             </li>
@@ -60,8 +60,8 @@ function StatusPill({ enabled, t }: { enabled: boolean; t: AdminDict }) {
     <span
       className={`inline-flex items-center text-[11px] px-2 py-0.5 rounded-full ${
         enabled
-          ? "bg-sage-500/15 text-sage-600"
-          : "bg-ink-500/10 text-ink-500"
+          ? "bg-sage-500/15 text-sage-700"
+          : "bg-ink-500/10 text-ink-700"
       }`}
     >
       {enabled ? t.statusOpen : t.statusClosed}
@@ -72,13 +72,13 @@ function StatusPill({ enabled, t }: { enabled: boolean; t: AdminDict }) {
 function EmptyState({ t }: { t: AdminDict }) {
   return (
     <div className="bg-white rounded-3xl border border-cream-200 p-10 text-center">
-      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blush-400/15 text-blush-600">
+      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blush-400/15 text-blush-700">
         <RingsIcon className="h-7 w-7" />
       </div>
       <h2 className="font-serif text-xl text-ink-900 mb-2">
         {t.eventsEmptyTitle}
       </h2>
-      <p className="text-ink-500 text-sm mb-6">{t.eventsEmptyBody}</p>
+      <p className="text-ink-700 text-sm mb-6">{t.eventsEmptyBody}</p>
       <Link
         href="/admin/new"
         className="inline-block btn-candy px-5 py-3 text-sm"

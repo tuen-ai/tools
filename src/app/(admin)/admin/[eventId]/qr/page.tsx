@@ -7,6 +7,7 @@ import { requireEventAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { env } from "@/lib/env";
+import { QR_DARK, QR_LIGHT } from "@/lib/theme";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { PrintButton } from "./print-button";
@@ -39,7 +40,7 @@ export default async function QRPage({ params }: Props) {
   const svg = await QRCode.toString(url, {
     type: "svg",
     margin: 1,
-    color: { dark: "#2A2622", light: "#FBF8F3" },
+    color: { dark: QR_DARK, light: QR_LIGHT },
     width: 360,
   });
 
@@ -56,7 +57,7 @@ export default async function QRPage({ params }: Props) {
       </div>
 
       <div className="bg-white rounded-3xl shadow-soft p-8 text-center print:shadow-none print:rounded-none print:p-12">
-        <p className="uppercase tracking-[0.25em] text-xs text-blush-600 mb-3">
+        <p className="uppercase tracking-[0.25em] text-xs text-blush-700 mb-3">
           {t.brand}
         </p>
         <h1 className="font-serif text-2xl text-ink-900 mb-2">

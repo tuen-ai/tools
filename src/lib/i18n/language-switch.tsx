@@ -52,8 +52,8 @@ export function LanguageSwitch({ current, basePath, tone = "default" }: Props) {
     tone === "dark"
       ? "text-white/50 hover:text-white"
       : tone === "muted"
-        ? "text-ink-500/70 hover:text-ink-900"
-        : "text-ink-500 hover:text-ink-900";
+        ? "text-ink-700/80 hover:text-ink-900"
+        : "text-ink-700 hover:text-ink-900";
   const activeClass =
     tone === "dark"
       ? "text-white font-semibold"
@@ -63,7 +63,7 @@ export function LanguageSwitch({ current, basePath, tone = "default" }: Props) {
     <div
       className="inline-flex items-center gap-3 text-[11px]"
       role="group"
-      aria-label="Language"
+      aria-label={current === "zh-Hant" ? "語言" : "Language"}
     >
       {LANGUAGES.map((code) => (
         <button

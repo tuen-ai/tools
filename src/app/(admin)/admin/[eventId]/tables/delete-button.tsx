@@ -29,7 +29,7 @@ export function DeleteTableButton({ lang, eventId, tableId, label }: Props) {
       type="button"
       onClick={run}
       disabled={pending}
-      className="text-[11px] text-ink-500 hover:text-blush-600 disabled:opacity-60 transition"
+      className="text-[11px] text-ink-700 hover:text-blush-700 disabled:opacity-60 transition"
     >
       {pending ? t.removeTablePending : t.removeTable}
     </button>

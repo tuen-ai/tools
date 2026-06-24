@@ -67,7 +67,7 @@ export function NewEventForm({ lang }: { lang: Lang }) {
       </Field>
 
       {message ? (
-        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
+        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700">
           {message}
         </div>
       ) : null}
@@ -102,7 +102,7 @@ function Field({
         {label}
         {required ? " *" : null}
       </span>
-      {hint ? <span className="block text-[11px] text-ink-500">{hint}</span> : null}
+      {hint ? <span className="block text-[11px] text-ink-700">{hint}</span> : null}
       {children}
     </label>
   );

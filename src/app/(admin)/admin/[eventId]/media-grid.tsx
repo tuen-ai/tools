@@ -160,7 +160,11 @@ export function MediaGrid({
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await fetch(pageUrl(rows.length, tableFilter));
+      // Offset must match the server ordering, which excludes soft-deleted
+      // rows. `rows` still holds locally-deleted rows (kept so an undo is
+      // possible), so page on visibleRows.length, not rows.length — else
+      // each delete inflates the offset and silently skips visible photos.
+      const res = await fetch(pageUrl(visibleRows.length, tableFilter));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as MorePageResponse;
       setRows((prev) => [...prev, ...data.rows]);
@@ -217,7 +221,7 @@ export function MediaGrid({
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-cream-100 text-ink-500">
             <CameraIcon className="h-6 w-6" />
           </div>
-          <p className="text-ink-500 text-sm">
+          <p className="text-ink-700 text-sm">
             {tableFilter ? t.gridEmptyFiltered : t.gridEmpty}
           </p>
         </div>
@@ -287,7 +291,7 @@ function LiveBadge({
         : t.liveConnecting;
 
   return (
-    <div className="flex items-center justify-between text-sm text-ink-500">
+    <div className="flex items-center justify-between text-sm text-ink-700">
       <span>{t.photoCount(count)}</span>
       <span className="inline-flex items-center gap-1.5">
         <span className={`h-2 w-2 rounded-full ${dot}`} />
@@ -477,7 +481,7 @@ function MediaTile({
                 type="button"
                 onClick={() => run("deleted")}
                 disabled={pending}
-                className="inline-flex flex-col items-center gap-1 rounded-xl bg-blush-400/15 text-blush-600 px-3 py-2.5 text-sm hover:bg-blush-400/25 disabled:opacity-60 transition"
+                className="inline-flex flex-col items-center gap-1 rounded-xl bg-blush-400/15 text-blush-700 px-3 py-2.5 text-sm hover:bg-blush-400/25 disabled:opacity-60 transition"
               >
                 <TrashIcon className="h-4 w-4" />
                 {t.modalDelete}

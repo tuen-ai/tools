@@ -70,6 +70,15 @@ Anonymous (`anon`) role has `INSERT` on `media` and `guests` only — no
 `SELECT`. Guests never see other guests' photos. Realtime publication is
 scoped to admin sessions.
 
+**Exception — the slideshow (Phase 7).** `/api/event/[slug]/slideshow`
+and `/e/[slug]/show` use the service-role client and deliberately bypass
+this RLS invariant: anyone holding the (publicly printed/forwarded) slug
+can poll for 30-min signed download URLs of every *visible* photo/video.
+This is an intentional trade-off for a frictionless venue projector
+(slug = bearer token). If stronger privacy is ever required, gate these
+two surfaces behind an admin-rotatable `events.show_token` column instead
+of the slug.
+
 ### Guests are anonymous + fingerprinted
 No accounts, no SMS. Each browser generates a UUID stored in localStorage
 (`wgp.fingerprint`) and posts it as `client_fingerprint`. Optional

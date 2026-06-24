@@ -19,12 +19,14 @@ const config: Config = {
         },
         blush: {
           400: "#FFB9C8",
-          500: "#FF8FA3", // primary
-          600: "#F06E89", // primary pressed / hover
+          500: "#FF8FA3", // primary fill (decorative / large surfaces)
+          600: "#F06E89", // pressed / hover edge
+          700: "#C03355", // AA-safe deep raspberry for text-on-light + white-on-fill
         },
         sage: {
           500: "#A8E0C8",
-          600: "#5FB592",
+          600: "#5FB592", // mint fill / status dot (decorative)
+          700: "#2F7D5C", // AA-safe success text on light
         },
         ink: {
           900: "#54434B", // headings (still AA on cream)

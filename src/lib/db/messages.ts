@@ -7,6 +7,10 @@ type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 export async function insertMessage(
   admin: SupabaseClient<Database>,
   args: {
+    /** Optional explicit row id. Pass the uuid embedded in the audio path
+     *  so the messages row correlates with its storage object (mirrors how
+     *  the photo finalize path passes the media id). */
+    id?: string;
     eventId: string;
     guestId: string;
     body?: string | null;
@@ -16,6 +20,7 @@ export async function insertMessage(
   const { data, error } = await admin
     .from("messages")
     .insert({
+      ...(args.id ? { id: args.id } : {}),
       event_id: args.eventId,
       guest_id: args.guestId,
       body: args.body ?? null,

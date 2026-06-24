@@ -55,9 +55,9 @@ export default async function EventDashboardPage({ params }: Props) {
     Icon: StatIcon;
     tint: string;
   }[] = [
-    { label: t.statPhotos, value: page.total, Icon: CameraIcon, tint: "bg-blush-500/12 text-blush-600" },
+    { label: t.statPhotos, value: page.total, Icon: CameraIcon, tint: "bg-blush-500/12 text-blush-700" },
     { label: t.statGuests, value: stats.guests, Icon: GlassIcon, tint: "bg-peach-soft text-peach-deep" },
-    { label: t.statMessages, value: stats.messages, Icon: EnvelopeIcon, tint: "bg-sage-500/25 text-sage-600" },
+    { label: t.statMessages, value: stats.messages, Icon: EnvelopeIcon, tint: "bg-sage-500/25 text-sage-700" },
     { label: t.statTables, value: tables.length, Icon: TableIcon, tint: "bg-lav-soft text-lav-deep" },
   ];
 

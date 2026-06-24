@@ -14,6 +14,15 @@ export const dynamic = "force-dynamic";
 // URLs for individual media via the admin endpoint here — instead the
 // route looks up the event by slug + delivers signed slide URLs in one
 // shot, mirroring how /api/upload/sign works (slug = access token).
+//
+// PRIVACY TRADE-OFF (intentional): this endpoint uses the service-role
+// client and therefore bypasses the "Gallery is private to the couple"
+// RLS invariant documented in CLAUDE.md. Anyone holding the (publicly
+// printed/forwarded) slug can poll it with ?since= to enumerate 30-min
+// signed download URLs for every visible photo/video. This is a
+// deliberate Phase 7 design choice for a frictionless venue projector;
+// if stronger privacy is needed, gate behind an admin-rotatable
+// events.show_token column instead of the slug. See CLAUDE.md.
 
 const QuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(200),
@@ -51,7 +60,9 @@ export async function GET(request: Request, { params }: RouteCtx) {
     .order("created_at", { ascending: true })
     .limit(parsed.data.limit);
 
-  if (parsed.data.since) q = q.gt("created_at", parsed.data.since);
+  // gte (not gt) so a row sharing the cursor's exact timestamp is not
+  // skipped; the client dedupes the re-returned boundary row by id.
+  if (parsed.data.since) q = q.gte("created_at", parsed.data.since);
 
   const { data: media, error } = await q;
   if (error) {

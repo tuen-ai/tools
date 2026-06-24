@@ -1,6 +1,6 @@
 import { isVideoMime, type AllowedMime } from "@/lib/upload/constants";
 
-export type UploadItemStatus = "pending" | "uploading" | "done" | "failed";
+type UploadItemStatus = "pending" | "uploading" | "done" | "failed";
 
 export interface UploadItem {
   id: string;

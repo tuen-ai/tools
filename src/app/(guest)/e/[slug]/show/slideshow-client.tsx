@@ -140,7 +140,7 @@ export function SlideshowClient({
           <h1 className="font-serif text-6xl mb-6 animate-[fadeup_600ms_ease-out]">
             {coupleNames}
           </h1>
-          <p className="text-ink-500 animate-[fadeup_800ms_ease-out]">
+          <p className="text-white/80 animate-[fadeup_800ms_ease-out]">
             {t.slideshowWaiting}
           </p>
         </div>

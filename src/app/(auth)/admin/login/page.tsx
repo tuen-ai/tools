@@ -10,9 +10,11 @@ interface Props {
   searchParams: Promise<{ lang?: string }>;
 }
 
-export const metadata = {
-  title: "登入 — 婚禮相片分享",
-};
+export async function generateMetadata({ searchParams }: Props) {
+  const sp = await searchParams;
+  const t = ADMIN_DICT[await resolveLangServer(sp.lang)];
+  return { title: `${t.loginHeading} — ${t.brand}` };
+}
 
 export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
@@ -27,7 +29,7 @@ export default async function LoginPage({ searchParams }: Props) {
     <main className="min-h-dvh flex flex-col items-center justify-center px-5 py-12 bg-cream-50">
       <div className="w-full max-w-sm">
         <header className="text-center mb-8">
-          <p className="uppercase tracking-[0.25em] text-xs text-blush-600 mb-2">
+          <p className="uppercase tracking-[0.25em] text-xs text-blush-700 mb-2">
             {t.loginEyebrow}
           </p>
           <h1 className="font-serif text-3xl text-ink-900">{t.loginHeading}</h1>

@@ -50,7 +50,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
           <span className="text-sm text-ink-700 font-medium">
             {t.loginInviteCode}
           </span>
-          <span className="block text-[11px] text-ink-500">
+          <span className="block text-[11px] text-ink-700">
             {t.loginInviteCodeHint}
           </span>
           <input
@@ -67,8 +67,8 @@ export function LoginForm({ lang }: { lang: Lang }) {
         <div
           className={`rounded-xl px-4 py-3 text-sm ${
             state.ok
-              ? "bg-sage-500/10 text-sage-600"
-              : "bg-blush-400/15 text-blush-600"
+              ? "bg-sage-500/10 text-sage-700"
+              : "bg-blush-400/15 text-blush-700"
           }`}
         >
           {message}
@@ -92,7 +92,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
       <button
         type="button"
         onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        className="block w-full text-center text-sm text-ink-500 hover:text-ink-700"
+        className="block w-full text-center text-sm text-ink-700 hover:text-ink-900"
       >
         {mode === "signin" ? t.toggleToSignUp : t.toggleToSignIn}
       </button>

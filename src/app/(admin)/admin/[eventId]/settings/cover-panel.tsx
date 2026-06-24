@@ -36,7 +36,7 @@ export function CoverPanel({ lang, eventId, coverUrl }: Props) {
     <div className="bg-white rounded-3xl shadow-soft p-7 mt-6 space-y-4">
       <div>
         <h2 className="font-serif text-lg text-ink-900">{t.coverHeading}</h2>
-        <p className="text-sm text-ink-500 mt-1">{t.coverHint}</p>
+        <p className="text-sm text-ink-700 mt-1">{t.coverHint}</p>
       </div>
 
       {coverUrl ? (
@@ -45,7 +45,7 @@ export function CoverPanel({ lang, eventId, coverUrl }: Props) {
           <img src={coverUrl} alt="" className="w-full h-40 object-cover" />
         </div>
       ) : (
-        <div className="rounded-2xl border-2 border-dashed border-cream-200 h-40 flex items-center justify-center text-ink-500 text-sm">
+        <div className="rounded-2xl border-2 border-dashed border-cream-200 h-40 flex items-center justify-center text-ink-700 text-sm">
           {t.coverEmpty}
         </div>
       )}
@@ -67,7 +67,7 @@ export function CoverPanel({ lang, eventId, coverUrl }: Props) {
             type="submit"
             formAction={removeAction}
             disabled={removePending}
-            className="rounded-xl border border-blush-400 text-blush-600 px-4 py-2 text-sm hover:bg-blush-400/10 disabled:opacity-60 transition"
+            className="rounded-xl border border-blush-400 text-blush-700 px-4 py-2 text-sm hover:bg-blush-400/10 disabled:opacity-60 transition"
           >
             {removePending ? t.coverRemovePending : t.coverRemove}
           </button>
@@ -80,7 +80,7 @@ export function CoverPanel({ lang, eventId, coverUrl }: Props) {
         </div>
       ) : null}
       {errMessage ? (
-        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
+        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700">
           {errMessage}
         </div>
       ) : null}
