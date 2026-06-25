@@ -15,7 +15,7 @@ import {
   type UploadItem,
 } from "@/lib/upload/client-upload";
 import { DICT, type Lang } from "@/lib/i18n";
-import { AudioRecorder } from "@/components/guest/audio-recorder";
+import { AudioRecorder, type VoiceClip } from "@/components/guest/audio-recorder";
 import {
   CameraIcon,
   MicIcon,
@@ -23,6 +23,7 @@ import {
   PlayIcon,
   HeartFilledIcon,
   CheckIcon,
+  TrashIcon,
 } from "@/components/ui/icons";
 
 const FP_KEY = "wgp.fingerprint";
@@ -85,11 +86,16 @@ export function UploadClient({
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [messageMode, setMessageMode] = useState<"text" | "voice">("text");
-  const [voiceSent, setVoiceSent] = useState(0);
+  const [voiceClips, setVoiceClips] = useState<VoiceClip[]>([]);
+  const [deletingClipId, setDeletingClipId] = useState<string | null>(null);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The "更換相片" label replaces the current selection; the "+ 新增相片"
+  // tile appends to it. Both point at the same file input, so we stash the
+  // intent on a ref and read it when the change event fires.
+  const appendModeRef = useRef(false);
 
   useEffect(() => {
     setFingerprint(readOrMintFingerprint());
@@ -100,6 +106,46 @@ export function UploadClient({
     if (typeof window === "undefined") return;
     if (name) window.localStorage.setItem(NAME_KEY, name);
   }, [name]);
+
+  // Revoke voice-clip blob URLs when the component unmounts so we don't
+  // leak them across full navigations. (Per-clip revoke happens at delete.)
+  useEffect(() => {
+    return () => {
+      voiceClips.forEach((c) => URL.revokeObjectURL(c.audioUrl));
+    };
+    // Intentionally empty deps — we only want this on unmount, not every
+    // time the list changes (or we'd revoke URLs still in use).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function deleteVoiceClip(clip: VoiceClip) {
+    if (deletingClipId) return;
+    if (!window.confirm(t.voiceClipDeleteConfirm)) return;
+    setDeletingClipId(clip.messageId);
+    try {
+      const res = await fetch(
+        `/api/messages/audio/${encodeURIComponent(clip.messageId)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventSlug,
+            clientFingerprint: fingerprint,
+          }),
+        },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `delete_failed_${res.status}`);
+      }
+      URL.revokeObjectURL(clip.audioUrl);
+      setVoiceClips((prev) => prev.filter((c) => c.messageId !== clip.messageId));
+    } catch (err) {
+      setBatchError((err as Error).message);
+    } finally {
+      setDeletingClipId(null);
+    }
+  }
 
   const doneCount = items.filter((i) => i.status === "done").length;
   const failedCount = items.filter((i) => i.status === "failed").length;
@@ -116,6 +162,8 @@ export function UploadClient({
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    const append = appendModeRef.current;
+    appendModeRef.current = false;
 
     const accepted: UploadItem[] = [];
     const rejected: string[] = [];
@@ -144,13 +192,18 @@ export function UploadClient({
       });
     }
 
-    if (accepted.length > MAX_FILES_PER_REQUEST) {
+    // When appending we keep existing pending/uploading/failed items so the
+    // guest doesn't lose their picks. Done items drop out — they've already
+    // been sent and shouldn't ride along on the next batch.
+    const base = append ? items.filter((i) => i.status !== "done") : [];
+    let merged = [...base, ...accepted];
+    if (merged.length > MAX_FILES_PER_REQUEST) {
       rejected.push(t.errTruncated(MAX_FILES_PER_REQUEST));
-      accepted.length = MAX_FILES_PER_REQUEST;
+      merged = merged.slice(0, MAX_FILES_PER_REQUEST);
     }
 
     setBatchError(rejected.length ? rejected.join(" · ") : null);
-    setItems(accepted);
+    setItems(merged);
   }
 
   async function handleUpload() {
@@ -261,20 +314,54 @@ export function UploadClient({
             className="w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
           />
         ) : (
-          <AudioRecorder
-            lang={lang}
-            eventSlug={eventSlug}
-            clientFingerprint={fingerprint}
-            displayName={name || null}
-            primaryColor={primaryColor}
-            onSent={() => setVoiceSent((n) => n + 1)}
-          />
+          <div className="space-y-3">
+            {voiceClips.length > 0 ? (
+              <div>
+                <p className="text-[11px] font-medium text-sage-700 mb-2">
+                  {t.voiceClipHeading(voiceClips.length)}
+                </p>
+                <ul className="space-y-2">
+                  {voiceClips.map((clip) => (
+                    <li
+                      key={clip.messageId}
+                      className="rounded-xl border border-cream-200 bg-cream-50 p-3"
+                    >
+                      <div className="flex items-center justify-between mb-2 text-[11px] text-ink-700">
+                        <span>{t.voiceClipDuration(clip.durationSec)}</span>
+                        <button
+                          type="button"
+                          onClick={() => deleteVoiceClip(clip)}
+                          disabled={deletingClipId === clip.messageId}
+                          className="inline-flex items-center gap-1 text-blush-700 hover:text-blush-700/80 disabled:opacity-60"
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" />
+                          {deletingClipId === clip.messageId
+                            ? t.voiceClipDeleting
+                            : t.voiceClipDelete}
+                        </button>
+                      </div>
+                      <audio
+                        src={clip.audioUrl}
+                        controls
+                        preload="metadata"
+                        className="w-full"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <AudioRecorder
+              lang={lang}
+              eventSlug={eventSlug}
+              clientFingerprint={fingerprint}
+              displayName={name || null}
+              primaryColor={primaryColor}
+              hasExistingClips={voiceClips.length > 0}
+              onSent={(clip) => setVoiceClips((prev) => [...prev, clip])}
+            />
+          </div>
         )}
-        {messageMode === "voice" && voiceSent > 0 ? (
-          <p className="mt-2 text-[11px] text-sage-700 text-center">
-            {t.voiceSent(voiceSent)}
-          </p>
-        ) : null}
       </div>
 
       <input
@@ -307,10 +394,36 @@ export function UploadClient({
       ) : (
         <>
           <FileList items={items} />
+          {!isUploading && items.length < MAX_FILES_PER_REQUEST ? (
+            <label
+              htmlFor="wgp-file-input"
+              onClick={() => {
+                appendModeRef.current = true;
+              }}
+              className="flex items-center justify-center gap-2 cursor-pointer rounded-xl border border-dashed border-blush-400 bg-blush-400/5 px-4 py-2.5 text-sm font-medium text-blush-700 hover:bg-blush-400/10 transition"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              {t.addMorePhotos}
+            </label>
+          ) : null}
           <div className="flex gap-2">
             {!isUploading ? (
               <label
                 htmlFor="wgp-file-input"
+                onClick={() => {
+                  appendModeRef.current = false;
+                }}
                 className="flex-1 cursor-pointer btn-soft px-4 py-3 text-center text-sm"
               >
                 {t.changePhotos}

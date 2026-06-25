@@ -19,6 +19,7 @@ export interface Dict {
   choosePhotos: string;
   chooseHelp: (max: number) => string;
   changePhotos: string;
+  addMorePhotos: string;
   send: (count: number) => string;
   sending: (done: number, total: number) => string;
   privacyNote: (perGuest: number) => string;
@@ -37,10 +38,16 @@ export interface Dict {
   msgModeText: string;
   msgModeVoice: string;
   voiceSent: (n: number) => string;
+  voiceClipHeading: (n: number) => string;
+  voiceClipDuration: (sec: number) => string;
+  voiceClipDelete: string;
+  voiceClipDeleting: string;
+  voiceClipDeleteConfirm: string;
   micDenied: string;
   recStart: string;
   recStop: string;
   recRerecord: string;
+  recRecordAnother: string;
   recSend: string;
   retry: string;
   errUnsupported: (name: string) => string;
@@ -61,6 +68,7 @@ export const DICT: Record<Lang, Dict> = {
     chooseHelp: (max) =>
       `Photos or videos (under 30s) · up to ${max} at a time`,
     changePhotos: "Change photos",
+    addMorePhotos: "Add more",
     send: (count) =>
       `Send ${count} photo${count === 1 ? "" : "s"}`,
     sending: (done, total) => `Sending… ${done}/${total}`,
@@ -85,10 +93,18 @@ export const DICT: Record<Lang, Dict> = {
     msgModeText: "Text",
     msgModeVoice: "Voice",
     voiceSent: (n) => `${n} voice message${n === 1 ? "" : "s"} sent`,
+    voiceClipHeading: (n) =>
+      `Sent voice message${n === 1 ? "" : "s"} (${n})`,
+    voiceClipDuration: (sec) => `${sec}s`,
+    voiceClipDelete: "Delete & re-record",
+    voiceClipDeleting: "Removing…",
+    voiceClipDeleteConfirm:
+      "Delete this voice message? You can record a new one after.",
     micDenied: "Microphone access denied. Please allow access to record.",
     recStart: "Start recording",
     recStop: "Stop",
     recRerecord: "Re-record",
+    recRecordAnother: "Record another",
     recSend: "Send",
     retry: "Retry",
     errUnsupported: (name) => `${name}: unsupported format`,
@@ -107,6 +123,7 @@ export const DICT: Record<Lang, Dict> = {
     chooseHelp: (max) =>
       `相片或短片(30 秒以內) · 每次最多 ${max} 個`,
     changePhotos: "更換相片",
+    addMorePhotos: "新增相片",
     send: (count) => `傳送 ${count} 張相片`,
     sending: (done, total) => `傳送中… ${done}/${total}`,
     privacyNote: (perGuest) =>
@@ -127,10 +144,16 @@ export const DICT: Record<Lang, Dict> = {
     msgModeText: "文字",
     msgModeVoice: "語音",
     voiceSent: (n) => `已送出 ${n} 段語音留言`,
+    voiceClipHeading: (n) => `已送出嘅語音(${n})`,
+    voiceClipDuration: (sec) => `${sec} 秒`,
+    voiceClipDelete: "刪除並重新錄製",
+    voiceClipDeleting: "移除中…",
+    voiceClipDeleteConfirm: "確定刪除呢段語音?之後可以再錄一段。",
     micDenied: "無法存取麥克風,請允許瀏覽器使用麥克風。",
     recStart: "開始錄音",
     recStop: "停止",
     recRerecord: "重新錄製",
+    recRecordAnother: "再錄一段",
     recSend: "送出",
     retry: "重試",
     errUnsupported: (name) => `${name}:不支援的格式`,
