@@ -88,6 +88,13 @@ export function UploadClient({
   const [messageMode, setMessageMode] = useState<"text" | "voice">("text");
   const [voiceClips, setVoiceClips] = useState<VoiceClip[]>([]);
   const [deletingClipId, setDeletingClipId] = useState<string | null>(null);
+  // Mirror voiceClips into a ref so the unmount cleanup can revoke the
+  // LATEST set of blob URLs, not the initial empty array (which is what a
+  // plain empty-deps useEffect would close over).
+  const voiceClipsRef = useRef<VoiceClip[]>(voiceClips);
+  useEffect(() => {
+    voiceClipsRef.current = voiceClips;
+  }, [voiceClips]);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -107,15 +114,14 @@ export function UploadClient({
     if (name) window.localStorage.setItem(NAME_KEY, name);
   }, [name]);
 
-  // Revoke voice-clip blob URLs when the component unmounts so we don't
-  // leak them across full navigations. (Per-clip revoke happens at delete.)
+  // Revoke voice-clip blob URLs on unmount so we don't leak them across
+  // full navigations. Reads from the ref above so we see the LATEST clips,
+  // not the [] captured by a plain empty-deps closure. (Per-clip revoke
+  // happens synchronously inside the delete handler.)
   useEffect(() => {
     return () => {
-      voiceClips.forEach((c) => URL.revokeObjectURL(c.audioUrl));
+      voiceClipsRef.current.forEach((c) => URL.revokeObjectURL(c.audioUrl));
     };
-    // Intentionally empty deps — we only want this on unmount, not every
-    // time the list changes (or we'd revoke URLs still in use).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function deleteVoiceClip(clip: VoiceClip) {
