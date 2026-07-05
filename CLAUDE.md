@@ -339,6 +339,43 @@ memory bounded. `maxDuration = 60` (Vercel Pro). Works comfortably for
 albums up to ~500 photos; larger ones may need a smarter
 stream-direct-from-storage approach or a one-off batch script.
 
+## Ops / reliability
+
+There is no self-managed server — Vercel (serverless) + Supabase (managed
+Postgres/Storage). Uploads go browser → Storage directly, so a Vercel blip
+doesn't kill in-flight PUTs. The real wedding-day risks, in order: venue
+Wi-Fi, self-inflicted last-minute deploys, Supabase free-tier project
+pausing, actual cloud outage.
+
+### Backup
+
+`npm run backup` (`scripts/backup.mjs`) does a full off-site dump:
+every table → `backups/backup-<ts>/db/*.json`, every storage object →
+`backups/backup-<ts>/storage/…`. Re-runs skip objects already present
+with a matching size, so it's cheap to run nightly before the wedding
+and once right after. Needs `NEXT_PUBLIC_SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY` (env or `.env.local`); run only from a
+trusted machine. `backups/` is gitignored — never commit it.
+
+### Health monitoring
+
+`GET /api/health` checks Postgres + Storage and returns 200/503 with
+`{ ok, db, storage, time }` (booleans only — safe to expose). Point a
+free uptime monitor (UptimeRobot / Better Stack) at it on a 1–5 min
+interval with email/push alerts.
+
+### Wedding-day runbook
+
+1. **Upgrade Supabase to Pro for the wedding month** — the free tier
+   pauses projects after ~1 week of inactivity (the most likely "server
+   died" scenario), Pro adds daily backups + optional PITR.
+2. Freeze deploys 48h before the event.
+3. Day before: scan the actual printed QR from a phone on cellular and
+   upload one photo end-to-end.
+4. Run `npm run backup` the night before and the day after.
+5. Low-tech fallback on printed signage: "如遇問題,可 WhatsApp 相片俾
+   XXX" — collects photos even if everything digital is down.
+
 ## Things deliberately deferred
 
 (Video, per-table QR, i18n, and the hard-delete cron all shipped in later

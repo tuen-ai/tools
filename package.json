@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "backup": "node scripts/backup.mjs",
     "gen:types": "supabase gen types typescript --linked --schema public > src/types/database.ts"
   },
   "dependencies": {
