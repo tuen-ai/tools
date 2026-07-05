@@ -5,20 +5,27 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventBySlug } from "@/lib/db/events";
 import { signThumbnailUrls, type SignedThumb } from "@/lib/db/media";
 import { STORAGE_BUCKET, isVideoMime } from "@/lib/upload/constants";
+import { DICT } from "@/lib/i18n";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { SlideshowClient, type Slide } from "./slideshow-client";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ lang?: string }>;
+  searchParams: Promise<{ lang?: string; layout?: string }>;
 }
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Slideshow",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const sp = await searchParams;
+  const lang = await resolveLangServer(sp.lang);
+  return {
+    title: DICT[lang].slideshowTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function SlideshowPage({ params, searchParams }: Props) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
@@ -82,6 +89,7 @@ export default async function SlideshowPage({ params, searchParams }: Props) {
       eventSlug={event.slug}
       coupleNames={event.couple_names}
       initialSlides={initialSlides}
+      mode={sp.layout === "wall" ? "wall" : "slideshow"}
     />
   );
 }

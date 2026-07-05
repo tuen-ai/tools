@@ -4,23 +4,28 @@ import { useTransition } from "react";
 
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import type { Lang } from "@/lib/i18n";
-import { deleteTableAction } from "./actions";
+import { deleteChallengeAction } from "./actions";
 
 interface Props {
   lang: Lang;
   eventId: string;
-  tableId: string;
-  label: string;
+  challengeId: string;
+  prompt: string;
 }
 
-export function DeleteTableButton({ lang, eventId, tableId, label }: Props) {
+export function DeleteChallengeButton({
+  lang,
+  eventId,
+  challengeId,
+  prompt,
+}: Props) {
   const t = ADMIN_DICT[lang];
   const [pending, startTransition] = useTransition();
 
   function run() {
-    if (!window.confirm(t.removeTableConfirm(label))) return;
+    if (!window.confirm(t.removeChallengeConfirm(prompt))) return;
     startTransition(async () => {
-      await deleteTableAction({ eventId, tableId });
+      await deleteChallengeAction({ eventId, challengeId });
     });
   }
 
@@ -31,7 +36,7 @@ export function DeleteTableButton({ lang, eventId, tableId, label }: Props) {
       disabled={pending}
       className="text-[11px] text-ink-700 hover:text-blush-700 disabled:opacity-60 transition"
     >
-      {pending ? t.removeTablePending : t.removeTable}
+      {pending ? t.removeChallengePending : t.removeChallenge}
     </button>
   );
 }

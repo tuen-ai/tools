@@ -10,6 +10,7 @@ import {
   CameraIcon,
   PlayIcon,
   TableIcon,
+  SparkleIcon,
   DownloadIcon,
   EyeOffIcon,
   CheckIcon,
@@ -24,6 +25,11 @@ export interface TableOption {
   label: string;
 }
 
+export interface ChallengeOption {
+  id: string;
+  prompt: string;
+}
+
 interface Props {
   lang: Lang;
   eventId: string;
@@ -32,6 +38,7 @@ interface Props {
   total: number;
   pageSize: number;
   tables: TableOption[];
+  challenges: ChallengeOption[];
 }
 
 interface MorePageResponse {
@@ -50,6 +57,7 @@ export function MediaGrid({
   total: initialTotal,
   pageSize,
   tables,
+  challenges,
 }: Props) {
   const t = ADMIN_DICT[lang];
   const [rows, setRows] = useState<MediaRow[]>(initialRows);
@@ -64,6 +72,7 @@ export function MediaGrid({
   const [filterLoading, setFilterLoading] = useState(false);
 
   const tableLabelById = new Map(tables.map((tb) => [tb.id, tb.label]));
+  const challengePromptById = new Map(challenges.map((c) => [c.id, c.prompt]));
 
   // Refs let the realtime callbacks read current state without re-subscribing
   // every render.
@@ -160,7 +169,11 @@ export function MediaGrid({
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await fetch(pageUrl(rows.length, tableFilter));
+      // Offset must match the server ordering, which excludes soft-deleted
+      // rows. `rows` still holds locally-deleted rows (kept so an undo is
+      // possible), so page on visibleRows.length, not rows.length — else
+      // each delete inflates the offset and silently skips visible photos.
+      const res = await fetch(pageUrl(visibleRows.length, tableFilter));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as MorePageResponse;
       setRows((prev) => [...prev, ...data.rows]);
@@ -217,7 +230,7 @@ export function MediaGrid({
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-cream-100 text-ink-500">
             <CameraIcon className="h-6 w-6" />
           </div>
-          <p className="text-ink-500 text-sm">
+          <p className="text-ink-700 text-sm">
             {tableFilter ? t.gridEmptyFiltered : t.gridEmpty}
           </p>
         </div>
@@ -231,6 +244,11 @@ export function MediaGrid({
               thumb={thumbs[row.id]}
               tableLabel={
                 row.table_id ? (tableLabelById.get(row.table_id) ?? null) : null
+              }
+              challengePrompt={
+                row.challenge_id
+                  ? (challengePromptById.get(row.challenge_id) ?? null)
+                  : null
               }
               isFresh={freshIds.has(row.id)}
               isActive={activeId === row.id}
@@ -287,7 +305,7 @@ function LiveBadge({
         : t.liveConnecting;
 
   return (
-    <div className="flex items-center justify-between text-sm text-ink-500">
+    <div className="flex items-center justify-between text-sm text-ink-700">
       <span>{t.photoCount(count)}</span>
       <span className="inline-flex items-center gap-1.5">
         <span className={`h-2 w-2 rounded-full ${dot}`} />
@@ -333,6 +351,7 @@ function MediaTile({
   row,
   thumb,
   tableLabel,
+  challengePrompt,
   isFresh,
   isActive,
   onOpen,
@@ -343,6 +362,7 @@ function MediaTile({
   row: MediaRow;
   thumb: string | undefined;
   tableLabel: string | null;
+  challengePrompt: string | null;
   isFresh: boolean;
   isActive: boolean;
   onOpen: () => void;
@@ -405,6 +425,18 @@ function MediaTile({
         <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 text-[10px] bg-white/85 text-ink-700 rounded px-1.5 py-0.5 pointer-events-none backdrop-blur-sm">
           <TableIcon className="h-3 w-3" />
           {tableLabel}
+        </span>
+      ) : null}
+      {challengePrompt ? (
+        // Sits above the video badge (bottom-8) when both are present.
+        <span
+          className={`absolute ${
+            isVideo ? "bottom-8" : "bottom-2"
+          } left-2 inline-flex max-w-[85%] items-center gap-1 text-[10px] bg-blush-500/90 text-white rounded px-1.5 py-0.5 pointer-events-none`}
+          title={challengePrompt}
+        >
+          <SparkleIcon className="h-3 w-3 shrink-0" />
+          <span className="truncate">{challengePrompt}</span>
         </span>
       ) : null}
       {row.status === "hidden" ? (
@@ -477,7 +509,7 @@ function MediaTile({
                 type="button"
                 onClick={() => run("deleted")}
                 disabled={pending}
-                className="inline-flex flex-col items-center gap-1 rounded-xl bg-blush-400/15 text-blush-600 px-3 py-2.5 text-sm hover:bg-blush-400/25 disabled:opacity-60 transition"
+                className="inline-flex flex-col items-center gap-1 rounded-xl bg-blush-400/15 text-blush-700 px-3 py-2.5 text-sm hover:bg-blush-400/25 disabled:opacity-60 transition"
               >
                 <TrashIcon className="h-4 w-4" />
                 {t.modalDelete}

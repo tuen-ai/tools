@@ -34,7 +34,7 @@ export async function signInAction(
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: mapSupabaseAuthError(error.message) };
 
   redirect("/admin");
 }
@@ -68,7 +68,7 @@ export async function signUpAction(
     email: parsed.data.email,
     password: parsed.data.password,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: mapSupabaseAuthError(error.message) };
 
   const { data: sess } = await supabase.auth.getSession();
   if (!sess.session) {
@@ -76,6 +76,21 @@ export async function signUpAction(
   }
 
   redirect("/admin");
+}
+
+/**
+ * Map a free-form Supabase auth error string to one of our machine codes so
+ * the login form can localise it via ADMIN_DICT. Unknown messages fall back
+ * to a generic "try again" code rather than leaking raw English.
+ */
+function mapSupabaseAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login credentials")) return "err_invalid_credentials";
+  if (m.includes("already registered") || m.includes("already been registered")) {
+    return "err_email_in_use";
+  }
+  if (m.includes("rate limit") || m.includes("too many")) return "err_rate_limited";
+  return "err_auth_failed";
 }
 
 function constantTimeEqual(a: string, b: string): boolean {

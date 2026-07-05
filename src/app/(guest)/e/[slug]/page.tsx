@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventBySlug } from "@/lib/db/events";
+import { listChallenges } from "@/lib/db/challenges";
 import { signOriginalUrl } from "@/lib/db/media";
 import { DICT } from "@/lib/i18n";
 import { resolveLangServer } from "@/lib/i18n/server";
@@ -65,6 +66,18 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
   const primaryColor = readPrimaryColor(event.theme);
   const tableLabel = sp.table?.trim() || null;
 
+  // Photo challenges (optional prompts the couple set up). Failure is
+  // non-fatal — the upload card renders without the chips.
+  let challenges: { id: string; prompt: string }[] = [];
+  try {
+    challenges = (await listChallenges(admin, event.id)).map((c) => ({
+      id: c.id,
+      prompt: c.prompt,
+    }));
+  } catch {
+    // migrations not applied yet, or transient error — skip the chips
+  }
+
   // Sign a short-lived URL for the cover image (bucket is private).
   // Use a 30-minute TTL — the guest page is cached for 60s anyway, so
   // the URL outlives the cache by a comfortable margin.
@@ -95,8 +108,8 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
         <header className="text-center mb-8">
           {tableLabel ? (
             <p
-              className={`inline-block text-[11px] font-medium px-3 py-1 rounded-full mb-3 ${
-                primaryColor ? "text-white" : "bg-blush-500/10 text-blush-600"
+              className={`inline-block text-[11px] font-semibold tracking-widest px-3 py-1.5 rounded-md mb-3 rotate-2 border-2 border-dashed ${
+                primaryColor ? "text-white border-white/50" : "text-blush-700 border-blush-700"
               }`}
               style={primaryColor ? { backgroundColor: primaryColor } : undefined}
             >
@@ -104,8 +117,8 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
             </p>
           ) : null}
           <p
-            className={`uppercase tracking-[0.25em] text-xs mb-3 ${
-              primaryColor ? "" : "text-blush-600"
+            className={`uppercase tracking-[0.3em] text-xs font-semibold mb-3 ${
+              primaryColor ? "" : "text-sage-700"
             }`}
             style={primaryColor ? { color: primaryColor } : undefined}
           >
@@ -128,6 +141,7 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
             maxPerGuest={event.max_uploads_per_guest}
             primaryColor={primaryColor}
             tableLabel={tableLabel}
+            challenges={challenges}
           />
         ) : (
           <ClosedScreen lang={lang} />

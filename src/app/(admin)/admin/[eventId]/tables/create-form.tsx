@@ -51,7 +51,7 @@ export function CreateTableForm({
         </button>
       </div>
       {errMessage ? (
-        <p className="mt-2 text-[11px] text-blush-600">{errMessage}</p>
+        <p className="mt-2 text-[11px] text-blush-700">{errMessage}</p>
       ) : null}
     </form>
   );

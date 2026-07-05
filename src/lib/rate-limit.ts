@@ -10,7 +10,8 @@ import "server-only";
 //   * Memory grows with unique IPs but is bounded in practice (a wedding
 //     reaches a few hundred clients at most).
 //
-// Swap for Upstash Redis (or similar) in Phase 6 if needed.
+// Swap for Upstash Redis (or similar) when running multi-region or
+// expecting abuse.
 
 interface Bucket {
   tokens: number;

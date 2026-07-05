@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ALLOWED_MIME_TYPES,
@@ -15,13 +15,16 @@ import {
   type UploadItem,
 } from "@/lib/upload/client-upload";
 import { DICT, type Lang } from "@/lib/i18n";
-import { AudioRecorder } from "@/components/guest/audio-recorder";
+import { AudioRecorder, type VoiceClip } from "@/components/guest/audio-recorder";
 import {
   CameraIcon,
   MicIcon,
   PencilIcon,
   PlayIcon,
   HeartFilledIcon,
+  CheckIcon,
+  TrashIcon,
+  StarFilledIcon,
 } from "@/components/ui/icons";
 
 const FP_KEY = "wgp.fingerprint";
@@ -46,6 +49,8 @@ interface Props {
   maxPerGuest: number;
   primaryColor: string | null;
   tableLabel: string | null;
+  /** Photo-challenge prompts the couple set up; empty = feature hidden. */
+  challenges: { id: string; prompt: string }[];
 }
 
 function videoDurationOk(file: File): Promise<boolean> {
@@ -72,6 +77,7 @@ export function UploadClient({
   maxPerGuest,
   primaryColor,
   tableLabel,
+  challenges,
 }: Props) {
   const t = DICT[lang];
   const primaryButtonClass = primaryColor
@@ -84,21 +90,105 @@ export function UploadClient({
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [messageMode, setMessageMode] = useState<"text" | "voice">("text");
-  const [voiceSent, setVoiceSent] = useState(0);
+  // Selected photo-challenge (applies to the whole batch; tap to toggle).
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [voiceClips, setVoiceClips] = useState<VoiceClip[]>([]);
+  const [deletingClipId, setDeletingClipId] = useState<string | null>(null);
+  // Mirror voiceClips into a ref so the unmount cleanup can revoke the
+  // LATEST set of blob URLs, not the initial empty array (which is what a
+  // plain empty-deps useEffect would close over).
+  const voiceClipsRef = useRef<VoiceClip[]>(voiceClips);
+  useEffect(() => {
+    voiceClipsRef.current = voiceClips;
+  }, [voiceClips]);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
+  // The guest's previously-sent uploads ("did it work?" reassurance strip).
+  const [myUploads, setMyUploads] = useState<{
+    count: number;
+    items: { id: string; kind: "image" | "video"; url: string | null }[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The "更換相片" label replaces the current selection; the "+ 新增相片"
+  // tile appends to it. Both point at the same file input, so we stash the
+  // intent on a ref and read it when the change event fires.
+  const appendModeRef = useRef(false);
 
   useEffect(() => {
     setFingerprint(readOrMintFingerprint());
     setName(window.localStorage.getItem(NAME_KEY) ?? "");
   }, []);
 
+  const refreshMyUploads = useCallback(
+    async (fp: string) => {
+      if (!fp) return;
+      try {
+        const res = await fetch("/api/media/mine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventSlug, clientFingerprint: fp }),
+        });
+        if (!res.ok) return; // reassurance strip is best-effort only
+        setMyUploads(
+          (await res.json()) as NonNullable<typeof myUploads>,
+        );
+      } catch {
+        // Network blip — the strip just doesn't show.
+      }
+    },
+    [eventSlug],
+  );
+
+  // Returning guests see their earlier uploads as soon as the
+  // fingerprint hydrates.
+  useEffect(() => {
+    if (fingerprint) void refreshMyUploads(fingerprint);
+  }, [fingerprint, refreshMyUploads]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (name) window.localStorage.setItem(NAME_KEY, name);
   }, [name]);
+
+  // Revoke voice-clip blob URLs on unmount so we don't leak them across
+  // full navigations. Reads from the ref above so we see the LATEST clips,
+  // not the [] captured by a plain empty-deps closure. (Per-clip revoke
+  // happens synchronously inside the delete handler.)
+  useEffect(() => {
+    return () => {
+      voiceClipsRef.current.forEach((c) => URL.revokeObjectURL(c.audioUrl));
+    };
+  }, []);
+
+  async function deleteVoiceClip(clip: VoiceClip) {
+    if (deletingClipId) return;
+    if (!window.confirm(t.voiceClipDeleteConfirm)) return;
+    setDeletingClipId(clip.messageId);
+    try {
+      const res = await fetch(
+        `/api/messages/audio/${encodeURIComponent(clip.messageId)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventSlug,
+            clientFingerprint: fingerprint,
+          }),
+        },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `delete_failed_${res.status}`);
+      }
+      URL.revokeObjectURL(clip.audioUrl);
+      setVoiceClips((prev) => prev.filter((c) => c.messageId !== clip.messageId));
+    } catch (err) {
+      setBatchError((err as Error).message);
+    } finally {
+      setDeletingClipId(null);
+    }
+  }
 
   const doneCount = items.filter((i) => i.status === "done").length;
   const failedCount = items.filter((i) => i.status === "failed").length;
@@ -115,6 +205,8 @@ export function UploadClient({
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    const append = appendModeRef.current;
+    appendModeRef.current = false;
 
     const accepted: UploadItem[] = [];
     const rejected: string[] = [];
@@ -143,13 +235,18 @@ export function UploadClient({
       });
     }
 
-    if (accepted.length > MAX_FILES_PER_REQUEST) {
+    // When appending we keep existing pending/uploading/failed items so the
+    // guest doesn't lose their picks. Done items drop out — they've already
+    // been sent and shouldn't ride along on the next batch.
+    const base = append ? items.filter((i) => i.status !== "done") : [];
+    let merged = [...base, ...accepted];
+    if (merged.length > MAX_FILES_PER_REQUEST) {
       rejected.push(t.errTruncated(MAX_FILES_PER_REQUEST));
-      accepted.length = MAX_FILES_PER_REQUEST;
+      merged = merged.slice(0, MAX_FILES_PER_REQUEST);
     }
 
     setBatchError(rejected.length ? rejected.join(" · ") : null);
-    setItems(accepted);
+    setItems(merged);
   }
 
   async function handleUpload() {
@@ -163,12 +260,15 @@ export function UploadClient({
         displayName: name || null,
         message: message || null,
         tableLabel: tableLabel ?? null,
+        challengeId,
         items,
         onItemChange: patchItem,
       });
       // Clear the message after a successful send so a second batch
       // doesn't accidentally re-post it.
       setMessage("");
+      // Refresh the reassurance strip so the new photos show up in it.
+      void refreshMyUploads(fingerprint);
     } catch (err) {
       setBatchError((err as Error).message);
     } finally {
@@ -195,11 +295,40 @@ export function UploadClient({
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-soft p-6 sm:p-8 space-y-5">
+    <div className="frame-vintage shadow-soft p-6 sm:p-8 space-y-5">
+      {myUploads && myUploads.count > 0 ? (
+        <div className="rounded-xl bg-sage-500/10 p-3">
+          <p className="text-[11px] font-medium text-sage-700 mb-2">
+            {t.myUploadsHeading(myUploads.count)}
+          </p>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {myUploads.items.map((m) =>
+              m.kind === "image" && m.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={m.id}
+                  src={m.url}
+                  alt=""
+                  loading="lazy"
+                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <span
+                  key={m.id}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ink-900/80 text-white"
+                >
+                  <PlayIcon className="h-4 w-4" />
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">
           {t.yourName}{" "}
-          <span className="text-ink-500 font-normal">{t.optional}</span>
+          <span className="text-ink-700 font-normal">{t.optional}</span>
         </span>
         <input
           type="text"
@@ -216,7 +345,7 @@ export function UploadClient({
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm text-ink-700 font-medium">
             {t.messageLabel}{" "}
-            <span className="text-ink-500 font-normal">{t.optional}</span>
+            <span className="text-ink-700 font-normal">{t.optional}</span>
           </span>
           <div
             className="inline-flex rounded-lg bg-cream-100 p-0.5 text-[11px]"
@@ -226,25 +355,25 @@ export function UploadClient({
               type="button"
               onClick={() => setMessageMode("text")}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
-                messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
+                messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
               }`}
               role="tab"
               aria-selected={messageMode === "text"}
             >
               <PencilIcon className="h-3.5 w-3.5" />
-              {lang === "zh-Hant" ? "文字" : "Text"}
+              {t.msgModeText}
             </button>
             <button
               type="button"
               onClick={() => setMessageMode("voice")}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
-                messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-500"
+                messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
               }`}
               role="tab"
               aria-selected={messageMode === "voice"}
             >
               <MicIcon className="h-3.5 w-3.5" />
-              {lang === "zh-Hant" ? "語音" : "Voice"}
+              {t.msgModeVoice}
             </button>
           </div>
         </div>
@@ -260,28 +389,101 @@ export function UploadClient({
             className="w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
           />
         ) : (
-          <AudioRecorder
-            lang={lang}
-            eventSlug={eventSlug}
-            clientFingerprint={fingerprint}
-            displayName={name || null}
-            primaryColor={primaryColor}
-            onSent={() => setVoiceSent((n) => n + 1)}
-          />
+          <div className="space-y-3">
+            {voiceClips.length > 0 ? (
+              <div>
+                <p className="text-[11px] font-medium text-sage-700 mb-2">
+                  {t.voiceClipHeading(voiceClips.length)}
+                </p>
+                <ul className="space-y-2">
+                  {voiceClips.map((clip) => (
+                    <li
+                      key={clip.messageId}
+                      className="rounded-xl border border-cream-200 bg-cream-50 p-3"
+                    >
+                      <div className="flex items-center justify-between mb-2 text-[11px] text-ink-700">
+                        <span>{t.voiceClipDuration(clip.durationSec)}</span>
+                        <button
+                          type="button"
+                          onClick={() => deleteVoiceClip(clip)}
+                          disabled={deletingClipId === clip.messageId}
+                          className="inline-flex items-center gap-1 text-blush-700 hover:text-blush-700/80 disabled:opacity-60"
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" />
+                          {deletingClipId === clip.messageId
+                            ? t.voiceClipDeleting
+                            : t.voiceClipDelete}
+                        </button>
+                      </div>
+                      <audio
+                        src={clip.audioUrl}
+                        controls
+                        preload="metadata"
+                        className="w-full"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <AudioRecorder
+              lang={lang}
+              eventSlug={eventSlug}
+              clientFingerprint={fingerprint}
+              displayName={name || null}
+              primaryColor={primaryColor}
+              hasExistingClips={voiceClips.length > 0}
+              onSent={(clip) => setVoiceClips((prev) => [...prev, clip])}
+            />
+          </div>
         )}
-        {messageMode === "voice" && voiceSent > 0 ? (
-          <p className="mt-2 text-[11px] text-sage-600 text-center">
-            {lang === "zh-Hant"
-              ? `已送出 ${voiceSent} 段語音留言`
-              : `${voiceSent} voice message${voiceSent === 1 ? "" : "s"} sent`}
-          </p>
-        ) : null}
       </div>
+
+      {challenges.length > 0 ? (
+        <div>
+          <span className="text-sm text-ink-700 font-medium">
+            {t.challengesLabel}{" "}
+            <span className="text-ink-700 font-normal">{t.optional}</span>
+          </span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {challenges.map((c) => {
+              const active = challengeId === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={isUploading}
+                  aria-pressed={active}
+                  onClick={() =>
+                    setChallengeId((cur) => (cur === c.id ? null : c.id))
+                  }
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition ${
+                    active
+                      ? "border-blush-400 bg-blush-500/15 text-blush-700 font-medium"
+                      : "border-cream-200 bg-cream-50 text-ink-700 hover:border-blush-400"
+                  }`}
+                >
+                  <StarFilledIcon
+                    className={`h-3 w-3 ${active ? "" : "opacity-40"}`}
+                  />
+                  {c.prompt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm"
+        // Deliberately NOT advertising image/heic|heif here: when HEIC is
+        // absent from `accept`, iOS Safari transcodes HEIC → high-quality
+        // JPEG on selection (print quality preserved), which sidesteps raw
+        // HEIC upload/thumbnailing bugs. Worse, Safari 17+ converts even
+        // PNGs *to* HEIC when image/heic is listed. The server allowlist
+        // still accepts HEIC as a fallback for Android file managers.
+        accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
         multiple
         capture="environment"
         onChange={handleFileSelect}
@@ -293,25 +495,51 @@ export function UploadClient({
       {items.length === 0 ? (
         <label
           htmlFor="wgp-file-input"
-          className="block cursor-pointer rounded-2xl border-2 border-dashed border-blush-400 bg-blush-400/10 px-6 py-10 text-center transition hover:bg-blush-400/15"
+          className="block cursor-pointer rounded-lg border-2 border-dashed border-sage-600 bg-sage-500/10 px-6 py-10 text-center transition hover:bg-sage-500/15"
         >
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white text-blush-500 shadow-soft animate-[bob_2.6s_ease-in-out_infinite]">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white text-sage-700 shadow-soft animate-[bob_2.6s_ease-in-out_infinite]">
             <CameraIcon className="h-7 w-7" />
           </div>
           <div className="font-serif text-lg text-ink-900">
             {t.choosePhotos}
           </div>
-          <div className="text-xs text-ink-500 mt-1">
+          <div className="text-xs text-ink-700 mt-1">
             {t.chooseHelp(MAX_FILES_PER_REQUEST)}
           </div>
         </label>
       ) : (
         <>
           <FileList items={items} />
+          {!isUploading && items.length < MAX_FILES_PER_REQUEST ? (
+            <label
+              htmlFor="wgp-file-input"
+              onClick={() => {
+                appendModeRef.current = true;
+              }}
+              className="flex items-center justify-center gap-2 cursor-pointer rounded-xl border border-dashed border-blush-400 bg-blush-400/5 px-4 py-2.5 text-sm font-medium text-blush-700 hover:bg-blush-400/10 transition"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              {t.addMorePhotos}
+            </label>
+          ) : null}
           <div className="flex gap-2">
             {!isUploading ? (
               <label
                 htmlFor="wgp-file-input"
+                onClick={() => {
+                  appendModeRef.current = false;
+                }}
                 className="flex-1 cursor-pointer btn-soft px-4 py-3 text-center text-sm"
               >
                 {t.changePhotos}
@@ -333,12 +561,12 @@ export function UploadClient({
       )}
 
       {batchError ? (
-        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-600">
+        <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700">
           {batchError}
         </div>
       ) : null}
 
-      <p className="text-[11px] text-ink-500 text-center leading-relaxed">
+      <p className="text-[11px] text-ink-700 text-center leading-relaxed">
         {t.privacyNote(maxPerGuest)}
       </p>
     </div>
@@ -369,7 +597,7 @@ function FileList({ items }: { items: UploadItem[] }) {
               />
             </div>
             {it.status === "failed" && it.error ? (
-              <div className="mt-1 text-[11px] text-blush-600 truncate">
+              <div className="mt-1 text-[11px] text-blush-700 truncate">
                 {it.error}
               </div>
             ) : null}
@@ -408,31 +636,37 @@ function Thumb({ file }: { file: File }) {
 }
 
 function StatusBadge({ status }: { status: UploadItem["status"] }) {
-  const label =
-    status === "done"
-      ? "✓"
-      : status === "failed"
-        ? "!"
-        : status === "uploading"
-          ? "…"
-          : "•";
-  const cls =
-    status === "done"
-      ? "text-sage-600"
-      : status === "failed"
-        ? "text-blush-600"
-        : "text-ink-500";
+  // Done uses the line-icon check (consistent with the rest of the app and
+  // stable across OSes, unlike a ✓ glyph); the other states are small
+  // colour-coded dots — uploading pulses, pending is muted, failed is a
+  // solid raspberry dot.
+  if (status === "done") {
+    return (
+      <span role="img" aria-label={status} className="text-sage-700">
+        <CheckIcon className="h-4 w-4" />
+      </span>
+    );
+  }
+  const dotCls =
+    status === "failed"
+      ? "bg-blush-700"
+      : status === "uploading"
+        ? "bg-blush-500 animate-pulse"
+        : "bg-ink-500";
   return (
-    <span className={`text-sm ${cls}`} aria-label={status}>
-      {label}
-    </span>
+    <span
+      role="img"
+      aria-label={status}
+      className={`inline-block h-2.5 w-2.5 rounded-full ${dotCls}`}
+    />
   );
 }
 
 // Candy confetti — strawberry, peach, butter, mint, lavender, sky.
+// Vintage confetti — burgundy, mustard, teal, terracotta, plum, parchment.
 const CONFETTI_COLORS = [
-  "#FF8FA3", "#FFB9C8", "#FFC9A8",
-  "#FFE08A", "#A8E0C8", "#CDBDF0", "#AFD4F2",
+  "#7C3030", "#C98A8A", "#D9A441",
+  "#3E6E64", "#C97F5C", "#B79AB4", "#EFE4CD",
 ];
 
 function Confetti({ count = 32 }: { count?: number }) {
@@ -483,7 +717,7 @@ function ThankYou({
   return (
     <>
       {showConfetti ? <Confetti /> : null}
-      <div className="bg-white rounded-3xl shadow-soft p-8 text-center animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]">
+      <div className="frame-vintage shadow-soft p-8 text-center animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]">
         <div
           className="mx-auto mb-4 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full animate-[bob_2.6s_ease-in-out_infinite]"
           style={

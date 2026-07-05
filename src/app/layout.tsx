@@ -1,28 +1,31 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito, Fredoka, Noto_Sans_TC } from "next/font/google";
+import { Nunito_Sans, DM_Serif_Display, Noto_Serif_TC } from "next/font/google";
 
 import { resolveLangServer } from "@/lib/i18n/server";
 import "./globals.css";
 
-// Body: Nunito — rounded, friendly sans. Display: Fredoka — soft rounded
-// geometric for headings / couple names. CJK falls back to Noto Sans TC.
-const body = Nunito({
+// French-vintage type pairing (design E). Body: Nunito Sans — quiet
+// humanist sans. Display: DM Serif Display (incl. italic) for headings /
+// couple names. CJK falls back to Noto Serif TC so Chinese headings carry
+// the same engraved feel.
+const body = Nunito_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "600", "700"],
 });
-const display = Fredoka({
+const display = DM_Serif_Display({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
+  style: ["normal", "italic"],
 });
-const cjk = Noto_Sans_TC({
+const cjk = Noto_Serif_TC({
   subsets: ["latin"],
   variable: "--font-cjk",
   display: "swap",
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -35,7 +38,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#FBF8F3",
+  themeColor: "#F5EDDE",
 };
 
 export default async function RootLayout({

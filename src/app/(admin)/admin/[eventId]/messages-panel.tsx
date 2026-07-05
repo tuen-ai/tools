@@ -181,12 +181,12 @@ function MessageItem({
       {audioUrl ? (
         <audio src={audioUrl} controls preload="metadata" className="mt-2 w-full" />
       ) : null}
-      <div className="mt-1 opacity-0 group-hover:opacity-100 transition">
+      <div className="mt-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
         <button
           type="button"
           onClick={remove}
           disabled={pending}
-          className="text-[11px] text-blush-600 hover:text-blush-500 disabled:opacity-60"
+          className="text-[11px] text-blush-700 hover:text-blush-600 disabled:opacity-60"
         >
           {pending ? t.removeMessagePending : t.removeMessage}
         </button>

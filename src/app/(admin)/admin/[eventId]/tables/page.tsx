@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/db/events";
 import { listTables } from "@/lib/db/tables";
 import { env } from "@/lib/env";
+import { QR_DARK, QR_LIGHT } from "@/lib/theme";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { TableIcon } from "@/components/ui/icons";
@@ -50,7 +51,7 @@ export default async function TablesPage({ params }: Props) {
         {
           type: "svg",
           margin: 1,
-          color: { dark: "#2A2622", light: "#FBF8F3" },
+          color: { dark: QR_DARK, light: QR_LIGHT },
           width: 200,
         },
       ),
@@ -88,7 +89,7 @@ export default async function TablesPage({ params }: Props) {
               key={table.id}
               className="bg-white rounded-2xl border border-cream-200 p-4 text-center break-inside-avoid print:border-ink-500"
             >
-              <p className="uppercase tracking-[0.2em] text-[10px] text-blush-600 mb-1">
+              <p className="uppercase tracking-[0.2em] text-[10px] text-blush-700 mb-1">
                 {t.tableLabel}
               </p>
               <h2 className="font-serif text-2xl text-ink-900 mb-3 break-words">

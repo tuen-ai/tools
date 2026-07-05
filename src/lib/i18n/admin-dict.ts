@@ -39,11 +39,14 @@ export interface AdminDict {
   uploadsClosed: string;
   navSlideshow: string;
   navSlideshowTitle: string;
+  navWall: string;
+  navWallTitle: string;
   navDownloadAll: string;
   navDownloadAllTitle: string;
   navQr: string;
   navPoster: string;
   navTables: string;
+  navChallenges: string;
   navSettings: string;
   eventNotFound: string;
 
@@ -123,8 +126,26 @@ export interface AdminDict {
   removeTableConfirm: (label: string) => string;
   errTableExists: string;
 
+  // ── Challenges admin ───────────────────────────────────────────
+  challengesHeading: string;
+  challengesSubtitle: string;
+  challengesEmpty: string;
+  challengePromptPlaceholder: string;
+  addChallengePending: string;
+  addChallengeCta: string;
+  removeChallengePending: string;
+  removeChallenge: string;
+  removeChallengeConfirm: (prompt: string) => string;
+  errChallengeExists: string;
+  challengeSuggestionsLabel: string;
+  challengeSuggestions: string[];
+
   // ── QR page ────────────────────────────────────────────────────
   qrScanInstruction: string;
+  qrTabSign: string;
+  qrTabThankYou: string;
+  qrThankYouMessage: string;
+  qrThankYouHint: string;
   printCta: string;
 
   // ── Poster ─────────────────────────────────────────────────────
@@ -159,6 +180,9 @@ export interface AdminDict {
   errSignupsClosed: string;
   errSignupValidation: string;
   errInvalidInvite: string;
+  errEmailInUse: string;
+  errRateLimited: string;
+  errAuthFailed: string;
   errCheckEmail: string;
   errCoverNoFile: string;
   errCoverUnsupported: string;
@@ -198,11 +222,14 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     uploadsClosed: "上傳已關閉",
     navSlideshow: "投影模式",
     navSlideshowTitle: "新分頁開啟投影模式 — 投放去婚宴投影機",
+    navWall: "相片牆",
+    navWallTitle: "即時相片牆 — 多張新相同時上牆,鼓勵賓客上傳",
     navDownloadAll: "全部下載",
     navDownloadAllTitle: "下載所有可見相片(ZIP)",
     navQr: "QR",
     navPoster: "海報",
     navTables: "座位",
+    navChallenges: "相片任務",
     navSettings: "設定",
     eventNotFound: "找不到活動。",
 
@@ -278,7 +305,36 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
       `確定移除座位「${label}」?已有嘅相片仍然會保留座位標籤。`,
     errTableExists: "呢個 label 已經存在。",
 
+    challengesHeading: "相片任務",
+    challengesSubtitle:
+      "俾賓客一啲影相提示,推高上傳量、影到攝影師影唔到嘅畫面。賓客上傳時可以揀一個任務,相片會自動標籤。",
+    challengesEmpty:
+      "未有任務。加幾個提示(例如「同最年長嘅賓客合照」),賓客上傳頁就會出現任務俾佢哋揀。",
+    challengePromptPlaceholder: "任務提示(例如:同新人自拍一張)",
+    addChallengePending: "新增中…",
+    addChallengeCta: "加任務",
+    removeChallengePending: "移除中…",
+    removeChallenge: "移除",
+    removeChallengeConfirm: (prompt) =>
+      `確定移除任務「${prompt}」?已上傳嘅相片仍然保留標籤。`,
+    errChallengeExists: "呢個任務已經存在。",
+    challengeSuggestionsLabel: "快速加入:",
+    challengeSuggestions: [
+      "同新人自拍一張",
+      "影低你嗰檯嘅大合照",
+      "捕捉一個笑到最開心嘅人",
+      "同最年長嘅賓客合照",
+      "影低你最鍾意嘅佈置細節",
+      "舞池上最放嘅一刻",
+    ],
+
     qrScanInstruction: "掃 QR 將相片送俾新人",
+    qrTabSign: "掛牌",
+    qrTabThankYou: "感謝卡插卡",
+    qrThankYouMessage:
+      "多謝您與我們共度美好一天!如果您影低咗任何時刻,掃碼補傳俾我哋留念。",
+    qrThankYouHint:
+      "一頁 A4 印四張,沿虛線剪開,夾入感謝卡 — 當日未掃碼嘅賓客可以事後補傳。",
     printCta: "列印",
 
     posterHeading: "可列印海報",
@@ -307,11 +363,14 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     errNotFound: "找不到。",
     errForbidden: "冇權限。",
     errNotSignedIn: "請先登入。",
-    errInvalidCredentials: "請輸入有效嘅電郵同密碼。",
+    errInvalidCredentials: "電郵或密碼錯誤。",
     errSignupsClosed:
       "註冊已關閉。請聯絡現有管理員加你入去,或設定 ADMIN_SIGNUP_INVITE_CODE。",
     errSignupValidation: "電郵、密碼(8+ 字)同邀請碼三樣都必須填。",
     errInvalidInvite: "邀請碼錯誤。",
+    errEmailInUse: "呢個電郵已經註冊咗,請直接登入。",
+    errRateLimited: "嘗試太頻密,請稍後再試。",
+    errAuthFailed: "登入失敗,請稍後再試。",
     errCheckEmail: "請查看電郵確認帳號,然後返嚟登入。",
     errCoverNoFile: "請揀一個檔案。",
     errCoverUnsupported: "唔支援呢種格式。",
@@ -353,11 +412,15 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     navSlideshow: "Slideshow",
     navSlideshowTitle:
       "Open slideshow in a new tab — mirror to your venue projector",
+    navWall: "Photo wall",
+    navWallTitle:
+      "Live photo wall — many new photos at once, nudges guests to upload",
     navDownloadAll: "Download all",
     navDownloadAllTitle: "Download all visible photos as ZIP",
     navQr: "QR",
     navPoster: "Poster",
     navTables: "Tables",
+    navChallenges: "Challenges",
     navSettings: "Settings",
     eventNotFound: "Event not found.",
 
@@ -439,7 +502,36 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
       `Remove table "${label}"? Existing photos keep their tag.`,
     errTableExists: "Already exists.",
 
+    challengesHeading: "Photo challenges",
+    challengesSubtitle:
+      "Give guests photo prompts — it drives uploads and captures moments the photographer can't. Guests pick a challenge when uploading; photos get tagged automatically.",
+    challengesEmpty:
+      "No challenges yet. Add a few prompts (e.g. “photo with the oldest guest”) and they'll appear on the guest upload page.",
+    challengePromptPlaceholder: "Prompt (e.g. a selfie with the couple)",
+    addChallengePending: "Adding…",
+    addChallengeCta: "Add challenge",
+    removeChallengePending: "Removing…",
+    removeChallenge: "Remove",
+    removeChallengeConfirm: (prompt) =>
+      `Remove challenge "${prompt}"? Uploaded photos keep their tag.`,
+    errChallengeExists: "That challenge already exists.",
+    challengeSuggestionsLabel: "Quick add:",
+    challengeSuggestions: [
+      "A selfie with the couple",
+      "A group photo of your table",
+      "Someone laughing their hardest",
+      "A photo with the oldest guest",
+      "Your favourite décor detail",
+      "The wildest dance-floor moment",
+    ],
+
     qrScanInstruction: "Scan the code to share your photos",
+    qrTabSign: "Table sign",
+    qrTabThankYou: "Thank-you card insert",
+    qrThankYouMessage:
+      "Thank you for celebrating with us! If you captured any moments, we'd love to see them — scan to share.",
+    qrThankYouHint:
+      "Prints four per A4 page — cut along the dashed lines and tuck one into each thank-you card. Guests who never scanned at the venue can still upload later.",
     printCta: "Print",
 
     posterHeading: "Printable poster",
@@ -468,12 +560,15 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     errNotFound: "Not found.",
     errForbidden: "Forbidden.",
     errNotSignedIn: "Please sign in first.",
-    errInvalidCredentials: "Please enter a valid email and password.",
+    errInvalidCredentials: "Email or password is incorrect.",
     errSignupsClosed:
       "Signups are closed. Ask an existing admin to add you, or have them set ADMIN_SIGNUP_INVITE_CODE.",
     errSignupValidation:
       "Email, password (8+ chars), and invite code are all required.",
     errInvalidInvite: "Invalid invite code.",
+    errEmailInUse: "That email is already registered — please sign in instead.",
+    errRateLimited: "Too many attempts. Please try again in a moment.",
+    errAuthFailed: "Sign-in failed. Please try again.",
     errCheckEmail: "Check your email to confirm your account, then sign in.",
     errCoverNoFile: "Please choose a file.",
     errCoverUnsupported: "Unsupported file format.",
@@ -500,6 +595,9 @@ const ERR_KEY_MAP: Record<string, keyof AdminDict> = {
   err_signups_closed: "errSignupsClosed",
   err_signup_validation: "errSignupValidation",
   err_invalid_invite: "errInvalidInvite",
+  err_email_in_use: "errEmailInUse",
+  err_rate_limited: "errRateLimited",
+  err_auth_failed: "errAuthFailed",
   err_check_email: "errCheckEmail",
   err_cover_no_file: "errCoverNoFile",
   no_file: "errCoverNoFile",
@@ -508,6 +606,7 @@ const ERR_KEY_MAP: Record<string, keyof AdminDict> = {
   err_cover_too_large: "errCoverTooLarge",
   file_too_large: "errCoverTooLarge",
   err_table_exists: "errTableExists",
+  err_challenge_exists: "errChallengeExists",
   err_slug_format: "errSlugFormat",
   err_slug_taken: "errSlugTaken",
 };

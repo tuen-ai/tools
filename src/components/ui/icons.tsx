@@ -125,16 +125,6 @@ export function BloomIcon(props: IconProps) {
   );
 }
 
-/** Ribboned heart — successful upload / gift to the couple. */
-export function HeartGiftIcon(props: IconProps) {
-  return (
-    <Base {...props}>
-      <path d="M12 20s-7-4.3-7-9.2A3.8 3.8 0 0 1 12 8.3 3.8 3.8 0 0 1 19 10.8C19 15.7 12 20 12 20z" />
-      <path d="M12 8.3V20M9 5.2c1.2-.2 2.4.6 3 3.1.6-2.5 1.8-3.3 3-3.1" />
-    </Base>
-  );
-}
-
 /** Solid heart — decorative scatter / confetti. */
 export function HeartFilledIcon(props: IconProps) {
   return (

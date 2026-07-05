@@ -222,8 +222,8 @@ function OrnateTemplate(p: TemplateProps) {
       <div className="relative z-10 flex flex-col items-center">
         <div
           className="rounded-3xl p-6 shadow-soft"
-          style={{ background: "#FBF8F3", border: `1px solid ${tint}` }}
-           
+          style={{ background: "#FFFFFF", border: `1px solid ${tint}` }}
+
           dangerouslySetInnerHTML={{ __html: p.qrSvg }}
         />
         <p

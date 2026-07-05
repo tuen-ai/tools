@@ -1,8 +1,16 @@
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env.server";
 import { STORAGE_BUCKET } from "@/lib/upload/constants";
+
+/** Length-guarded constant-time string compare (dodges timing side-channels). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,8 +35,8 @@ export async function GET(request: Request) {
   if (!secret) {
     return NextResponse.json({ error: "cron_disabled" }, { status: 503 });
   }
-  const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${secret}`) {
+  const auth = request.headers.get("authorization") ?? "";
+  if (!safeEqual(auth, `Bearer ${secret}`)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
