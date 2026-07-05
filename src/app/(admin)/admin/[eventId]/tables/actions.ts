@@ -65,7 +65,7 @@ export async function deleteTableAction(
     throw err;
   }
   const admin = createAdminClient();
-  await deleteTable(admin, parsed.data.tableId);
+  await deleteTable(admin, parsed.data.eventId, parsed.data.tableId);
   revalidatePath(`/admin/${parsed.data.eventId}/tables`);
   return { ok: true };
 }

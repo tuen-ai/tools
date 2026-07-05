@@ -32,8 +32,14 @@ export async function createChallenge(
 
 export async function deleteChallenge(
   admin: SupabaseClient<Database>,
+  eventId: string,
   id: string,
 ): Promise<void> {
-  const { error } = await admin.from("challenges").delete().eq("id", id);
+  // Scope to eventId (service-role client bypasses RLS).
+  const { error } = await admin
+    .from("challenges")
+    .delete()
+    .eq("id", id)
+    .eq("event_id", eventId);
   if (error) throw error;
 }

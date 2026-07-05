@@ -74,12 +74,10 @@ export async function POST(request: Request, { params }: RouteCtx) {
   }
 
   try {
-    await deleteMessage(admin, id);
+    await deleteMessage(admin, event.id, id);
   } catch (err) {
-    return NextResponse.json(
-      { error: "delete_failed", details: (err as Error).message },
-      { status: 500 },
-    );
+    console.error("guest audio delete failed", (err as Error).message);
+    return NextResponse.json({ error: "delete_failed" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

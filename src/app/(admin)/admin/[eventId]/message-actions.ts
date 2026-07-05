@@ -33,7 +33,7 @@ export async function deleteMessageAction(
   }
 
   const admin = createAdminClient();
-  await deleteMessage(admin, parsed.data.messageId);
+  await deleteMessage(admin, parsed.data.eventId, parsed.data.messageId);
   revalidatePath(`/admin/${parsed.data.eventId}`);
   return { ok: true };
 }

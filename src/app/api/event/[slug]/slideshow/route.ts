@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventBySlug } from "@/lib/db/events";
 import { signThumbnailUrls } from "@/lib/db/media";
+import { takeToken, getClientIp } from "@/lib/rate-limit";
 import { STORAGE_BUCKET, isVideoMime } from "@/lib/upload/constants";
 
 export const runtime = "nodejs";
@@ -33,7 +34,22 @@ interface RouteCtx {
   params: Promise<{ slug: string }>;
 }
 
+// Each call can mint up to 500 signed URLs; a real projector polls ~once a
+// minute, so this cap only bites a scripted abuser.
+const SHOW_RATE_LIMIT = { capacity: 12, refillPerSec: 0.2 } as const;
+
 export async function GET(request: Request, { params }: RouteCtx) {
+  const rl = takeToken(`show:${getClientIp(request)}`, SHOW_RATE_LIMIT);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
   const { slug } = await params;
   const url = new URL(request.url);
   const parsed = QuerySchema.safeParse({

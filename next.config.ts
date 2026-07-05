@@ -17,6 +17,28 @@ const config: NextConfig = {
     // limit beyond the 1 MB default so 4-6 MB JPEGs work.
     serverActions: { bodySizeLimit: "8mb" },
   },
+  async headers() {
+    // Nothing in this app is meant to be embedded, and the private admin
+    // gallery must never be framed — deny framing everywhere, block MIME
+    // sniffing, and trim the referrer.
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "geolocation=(), interest-cohort=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default config;

@@ -32,8 +32,15 @@ export async function createTable(
 
 export async function deleteTable(
   admin: SupabaseClient<Database>,
+  eventId: string,
   id: string,
 ): Promise<void> {
-  const { error } = await admin.from("tables").delete().eq("id", id);
+  // Scope to eventId — the service-role client bypasses RLS, so without
+  // this an admin of one event could delete another event's row by id.
+  const { error } = await admin
+    .from("tables")
+    .delete()
+    .eq("id", id)
+    .eq("event_id", eventId);
   if (error) throw error;
 }
