@@ -18,7 +18,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
   return (
     <form
       action={formAction}
-      className="bg-white rounded-3xl shadow-soft p-7 space-y-4"
+      className="frame-vintage shadow-soft p-7 space-y-4"
     >
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">{t.loginEmail}</span>
@@ -27,7 +27,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
           type="email"
           required
           autoComplete="email"
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </label>
 
@@ -41,7 +41,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
           autoComplete={
             mode === "signin" ? "current-password" : "new-password"
           }
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </label>
 
@@ -58,7 +58,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
             type="text"
             required
             autoComplete="off"
-            className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition font-mono"
+            className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition font-mono"
           />
         </label>
       ) : null}

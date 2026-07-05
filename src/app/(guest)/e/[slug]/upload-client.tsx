@@ -14,7 +14,7 @@ import {
   uploadGuestPhotos,
   type UploadItem,
 } from "@/lib/upload/client-upload";
-import { DICT, type Lang } from "@/lib/i18n";
+import { DICT, lookupUploadError, type Lang } from "@/lib/i18n";
 import { AudioRecorder, type VoiceClip } from "@/components/guest/audio-recorder";
 import {
   CameraIcon,
@@ -80,11 +80,13 @@ export function UploadClient({
   challenges,
 }: Props) {
   const t = DICT[lang];
-  const primaryButtonClass = primaryColor
-    ? "flex-1 rounded-full px-4 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed transition"
-    : "flex-1 btn-candy px-4 py-3 text-sm";
+  // One button shape everywhere — the vintage letterpress .btn-candy. A
+  // custom theme colour just overrides the fill (and drops the burgundy 3D
+  // edge) via inline style, instead of switching to a candy-era pill.
+  const primaryButtonClass =
+    "flex-1 btn-candy px-4 py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed";
   const primaryButtonStyle = primaryColor
-    ? { backgroundColor: primaryColor }
+    ? { backgroundColor: primaryColor, boxShadow: "none" }
     : undefined;
   const [fingerprint, setFingerprint] = useState("");
   const [name, setName] = useState("");
@@ -184,9 +186,31 @@ export function UploadClient({
       URL.revokeObjectURL(clip.audioUrl);
       setVoiceClips((prev) => prev.filter((c) => c.messageId !== clip.messageId));
     } catch (err) {
-      setBatchError((err as Error).message);
+      setBatchError(lookupUploadError(t, (err as Error).message));
     } finally {
       setDeletingClipId(null);
+    }
+  }
+
+  async function deleteMyUpload(mediaId: string) {
+    if (!window.confirm(t.myUploadDeleteConfirm)) return;
+    // Optimistic: drop it from the strip immediately.
+    setMyUploads((prev) =>
+      prev
+        ? {
+            count: Math.max(0, prev.count - 1),
+            items: prev.items.filter((m) => m.id !== mediaId),
+          }
+        : prev,
+    );
+    try {
+      await fetch(`/api/media/${encodeURIComponent(mediaId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventSlug, clientFingerprint: fingerprint }),
+      });
+    } catch {
+      // Best-effort — the strip already updated; a refresh reconciles.
     }
   }
 
@@ -201,6 +225,23 @@ export function UploadClient({
       prev.map((it) => (it.id === id ? { ...it, ...patch } : it)),
     );
   }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((it) => it.id !== id));
+  }
+
+  // Warn before navigating away mid-upload. Uploads PUT straight to storage
+  // from this tab; switching back to the camera app on flaky venue Wi-Fi
+  // would silently kill the in-flight transfers.
+  useEffect(() => {
+    if (!isUploading) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isUploading]);
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -249,8 +290,11 @@ export function UploadClient({
     setItems(merged);
   }
 
-  async function handleUpload() {
-    if (!items.length || !fingerprint) return;
+  // Core upload driver, shared by first send and retry-failed. Takes the
+  // list explicitly (retry mutates state first, which isn't visible to a
+  // closure over `items`).
+  async function runUpload(list: UploadItem[]) {
+    if (!list.length || !fingerprint) return;
     setIsUploading(true);
     setBatchError(null);
     try {
@@ -261,7 +305,7 @@ export function UploadClient({
         message: message || null,
         tableLabel: tableLabel ?? null,
         challengeId,
-        items,
+        items: list,
         onItemChange: patchItem,
       });
       // Clear the message after a successful send so a second batch
@@ -270,10 +314,31 @@ export function UploadClient({
       // Refresh the reassurance strip so the new photos show up in it.
       void refreshMyUploads(fingerprint);
     } catch (err) {
-      setBatchError((err as Error).message);
+      setBatchError(lookupUploadError(t, (err as Error).message));
     } finally {
       setIsUploading(false);
     }
+  }
+
+  function handleUpload() {
+    void runUpload(items);
+  }
+
+  // Keep the failed items (their File objects are still in state), reset
+  // them to pending, and re-run just those — so a guest doesn't have to
+  // re-find the failed photos in a huge camera roll.
+  function retryFailed() {
+    const retry = items
+      .filter((i) => i.status === "failed")
+      .map((i) => ({
+        ...i,
+        status: "pending" as const,
+        progress: 0,
+        error: undefined,
+      }));
+    if (!retry.length) return;
+    setItems(retry);
+    void runUpload(retry);
   }
 
   function reset() {
@@ -290,6 +355,7 @@ export function UploadClient({
         failedCount={failedCount}
         primaryColor={primaryColor}
         onAddMore={reset}
+        onRetryFailed={retryFailed}
       />
     );
   }
@@ -298,29 +364,46 @@ export function UploadClient({
     <div className="frame-vintage shadow-soft p-6 sm:p-8 space-y-5">
       {myUploads && myUploads.count > 0 ? (
         <div className="rounded-xl bg-sage-500/10 p-3">
-          <p className="text-[11px] font-medium text-sage-700 mb-2">
+          <p className="text-xs font-medium text-sage-700 mb-2">
             {t.myUploadsHeading(myUploads.count)}
           </p>
           <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-            {myUploads.items.map((m) =>
-              m.kind === "image" && m.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={m.id}
-                  src={m.url}
-                  alt=""
-                  loading="lazy"
-                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                />
-              ) : (
-                <span
-                  key={m.id}
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ink-900/80 text-white"
+            {myUploads.items.map((m) => (
+              <div key={m.id} className="relative shrink-0">
+                {m.kind === "image" && m.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={m.url}
+                    alt=""
+                    loading="lazy"
+                    className="h-12 w-12 rounded-lg object-cover"
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-ink-900/80 text-white">
+                    <PlayIcon className="h-4 w-4" />
+                  </span>
+                )}
+                {/* Tap-to-retract an accidental upload. */}
+                <button
+                  type="button"
+                  onClick={() => deleteMyUpload(m.id)}
+                  aria-label={t.removeFile}
+                  className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink-900 text-white shadow"
                 >
-                  <PlayIcon className="h-4 w-4" />
-                </span>
-              ),
-            )}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.4}
+                    strokeLinecap="round"
+                    className="h-3 w-3"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
@@ -336,7 +419,7 @@ export function UploadClient({
           onChange={(e) => setName(e.target.value)}
           maxLength={64}
           disabled={isUploading}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </label>
 
@@ -347,13 +430,13 @@ export function UploadClient({
             <span className="text-ink-700 font-normal">{t.optional}</span>
           </span>
           <div
-            className="inline-flex rounded-lg bg-cream-100 p-0.5 text-[11px]"
+            className="inline-flex rounded-lg bg-cream-100 p-0.5 text-xs"
             role="tablist"
           >
             <button
               type="button"
               onClick={() => setMessageMode("text")}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md transition ${
                 messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
               }`}
               role="tab"
@@ -365,7 +448,7 @@ export function UploadClient({
             <button
               type="button"
               onClick={() => setMessageMode("voice")}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md transition ${
                 messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
               }`}
               role="tab"
@@ -385,13 +468,13 @@ export function UploadClient({
             maxLength={500}
             rows={2}
             disabled={isUploading}
-            className="w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
+            className="w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition resize-none"
           />
         ) : (
           <div className="space-y-3">
             {voiceClips.length > 0 ? (
               <div>
-                <p className="text-[11px] font-medium text-sage-700 mb-2">
+                <p className="text-xs font-medium text-sage-700 mb-2">
                   {t.voiceClipHeading(voiceClips.length)}
                 </p>
                 <ul className="space-y-2">
@@ -400,13 +483,13 @@ export function UploadClient({
                       key={clip.messageId}
                       className="rounded-xl border border-cream-200 bg-cream-50 p-3"
                     >
-                      <div className="flex items-center justify-between mb-2 text-[11px] text-ink-700">
+                      <div className="flex items-center justify-between mb-2 text-xs text-ink-700">
                         <span>{t.voiceClipDuration(clip.durationSec)}</span>
                         <button
                           type="button"
                           onClick={() => deleteVoiceClip(clip)}
                           disabled={deletingClipId === clip.messageId}
-                          className="inline-flex items-center gap-1 text-blush-700 hover:text-blush-700/80 disabled:opacity-60"
+                          className="inline-flex items-center gap-1 py-1.5 text-blush-700 hover:text-blush-700/80 disabled:opacity-60"
                         >
                           <TrashIcon className="h-3.5 w-3.5" />
                           {deletingClipId === clip.messageId
@@ -456,7 +539,7 @@ export function UploadClient({
                   onClick={() =>
                     setChallengeId((cur) => (cur === c.id ? null : c.id))
                   }
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-2.5 text-sm transition ${
                     active
                       ? "border-blush-400 bg-blush-500/15 text-blush-700 font-medium"
                       : "border-cream-200 bg-cream-50 text-ink-700 hover:border-blush-400"
@@ -484,7 +567,10 @@ export function UploadClient({
         // still accepts HEIC as a fallback for Android file managers.
         accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
         multiple
-        capture="environment"
+        // NO `capture` attribute: on Android Chrome it forces the camera and
+        // hides the photo library, so guests can't upload the photos they
+        // already took — the app's core flow. The OS picker offers "Take
+        // photo" on its own anyway.
         onChange={handleFileSelect}
         disabled={isUploading}
         className="hidden"
@@ -508,7 +594,12 @@ export function UploadClient({
         </label>
       ) : (
         <>
-          <FileList items={items} />
+          <FileList
+            items={items}
+            lang={lang}
+            canRemove={!isUploading}
+            onRemove={removeItem}
+          />
           {!isUploading && items.length < MAX_FILES_PER_REQUEST ? (
             <label
               htmlFor="wgp-file-input"
@@ -556,6 +647,11 @@ export function UploadClient({
                 : t.send(items.length)}
             </button>
           </div>
+          {isUploading ? (
+            <p className="text-xs text-ink-700 text-center">
+              {t.uploadingKeepOpen}
+            </p>
+          ) : null}
         </>
       )}
 
@@ -565,14 +661,25 @@ export function UploadClient({
         </div>
       ) : null}
 
-      <p className="text-[11px] text-ink-700 text-center leading-relaxed">
+      <p className="text-xs text-ink-700 text-center leading-relaxed">
         {t.privacyNote(maxPerGuest)}
       </p>
     </div>
   );
 }
 
-function FileList({ items }: { items: UploadItem[] }) {
+function FileList({
+  items,
+  lang,
+  canRemove,
+  onRemove,
+}: {
+  items: UploadItem[];
+  lang: Lang;
+  canRemove: boolean;
+  onRemove: (id: string) => void;
+}) {
+  const t = DICT[lang];
   return (
     <ul className="space-y-2">
       {items.map((it) => (
@@ -582,7 +689,14 @@ function FileList({ items }: { items: UploadItem[] }) {
         >
           <Thumb file={it.file} />
           <div className="flex-1 min-w-0">
-            <div className="truncate text-sm text-ink-900">{it.file.name}</div>
+            {/* The raw filename (IMG_4302.jpeg) carries no meaning — show a
+                friendly kind + size instead. */}
+            <div className="truncate text-sm text-ink-900">
+              {t.fileMeta(
+                isVideoMime(it.file.type),
+                (it.file.size / 1024 / 1024).toFixed(1),
+              )}
+            </div>
             <div className="mt-1 h-1.5 w-full rounded-full bg-cream-100 overflow-hidden">
               <div
                 className={`h-full transition-all ${
@@ -596,12 +710,35 @@ function FileList({ items }: { items: UploadItem[] }) {
               />
             </div>
             {it.status === "failed" && it.error ? (
-              <div className="mt-1 text-[11px] text-blush-700 truncate">
-                {it.error}
+              <div className="mt-1 text-xs text-blush-700">
+                {lookupUploadError(t, it.error)}
               </div>
             ) : null}
           </div>
-          <StatusBadge status={it.status} />
+          {/* Per-file remove — so a guest who picked one wrong photo doesn't
+              have to re-pick the whole batch. Hidden while uploading. */}
+          {canRemove && it.status !== "done" ? (
+            <button
+              type="button"
+              onClick={() => onRemove(it.id)}
+              aria-label={t.removeFile}
+              className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full text-ink-500 hover:text-blush-700 hover:bg-blush-500/10 transition"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          ) : (
+            <StatusBadge status={it.status} />
+          )}
         </li>
       ))}
     </ul>
@@ -661,7 +798,6 @@ function StatusBadge({ status }: { status: UploadItem["status"] }) {
   );
 }
 
-// Candy confetti — strawberry, peach, butter, mint, lavender, sky.
 // Vintage confetti — burgundy, mustard, teal, terracotta, plum, parchment.
 const CONFETTI_COLORS = [
   "#7C3030", "#C98A8A", "#D9A441",
@@ -704,12 +840,14 @@ function ThankYou({
   failedCount,
   primaryColor,
   onAddMore,
+  onRetryFailed,
 }: {
   lang: Lang;
   doneCount: number;
   failedCount: number;
   primaryColor: string | null;
   onAddMore: () => void;
+  onRetryFailed: () => void;
 }) {
   const t = DICT[lang];
   const showConfetti = doneCount > 0 && failedCount === 0;
@@ -734,18 +872,29 @@ function ThankYou({
           {t.thanksBody(doneCount)}
           {failedCount > 0 ? t.thanksFailed(failedCount) : ""}
         </p>
-        <button
-          type="button"
-          onClick={onAddMore}
-          className={
-            primaryColor
-              ? "rounded-full px-5 py-3 text-white text-sm font-medium shadow-soft hover:brightness-90 transition"
-              : "btn-candy px-5 py-3 text-sm"
-          }
-          style={primaryColor ? { backgroundColor: primaryColor } : undefined}
-        >
-          {t.addMore}
-        </button>
+        <div className="flex flex-col gap-2 items-center">
+          {failedCount > 0 ? (
+            <button
+              type="button"
+              onClick={onRetryFailed}
+              className="btn-soft px-5 py-3 text-sm"
+            >
+              {t.retryFailed(failedCount)}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onAddMore}
+            className="btn-candy px-5 py-3 text-sm"
+            style={
+              primaryColor
+                ? { backgroundColor: primaryColor, boxShadow: "none" }
+                : undefined
+            }
+          >
+            {t.addMore}
+          </button>
+        </div>
       </div>
     </>
   );

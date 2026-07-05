@@ -66,7 +66,7 @@ export function SettingsForm({
           required
           maxLength={120}
           defaultValue={event.couple_names}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </label>
 
@@ -76,7 +76,7 @@ export function SettingsForm({
           name="event_date"
           type="date"
           defaultValue={event.event_date ?? ""}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </label>
 
@@ -87,7 +87,7 @@ export function SettingsForm({
           maxLength={500}
           rows={3}
           defaultValue={event.welcome_message ?? ""}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition resize-none"
         />
       </label>
 
@@ -101,7 +101,7 @@ export function SettingsForm({
           min={1}
           max={500}
           defaultValue={event.max_uploads_per_guest}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </label>
 

@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     width: 240,
     height: 240,
     quality: 60,
-    expiresInSec: 600,
+    expiresInSec: 1800,
   });
   const urlById = new Map(signed.map((s) => [s.id, s.url]));
 

@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { assertEventAdmin, AuthorizationError } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getMedia, signThumbnailUrls } from "@/lib/db/media";
+import {
+  getMedia,
+  signThumbnailUrls,
+  ADMIN_THUMB_TTL_SEC,
+} from "@/lib/db/media";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +33,8 @@ export async function GET(_request: Request, { params }: RouteContext) {
     throw err;
   }
 
-  const [thumb] = await signThumbnailUrls(admin, [media]);
+  const [thumb] = await signThumbnailUrls(admin, [media], {
+    expiresInSec: ADMIN_THUMB_TTL_SEC,
+  });
   return NextResponse.json({ url: thumb.url });
 }

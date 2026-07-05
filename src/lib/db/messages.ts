@@ -80,17 +80,24 @@ export async function listMessagesPage(
 
 export async function deleteMessage(
   admin: SupabaseClient<Database>,
+  eventId: string,
   id: string,
 ): Promise<void> {
+  // Scope every touch to eventId (service-role client bypasses RLS).
   // Best-effort: also remove the audio object if present.
   const { data: row } = await admin
     .from("messages")
     .select("audio_path")
     .eq("id", id)
+    .eq("event_id", eventId)
     .maybeSingle();
   if (row?.audio_path) {
     await admin.storage.from(STORAGE_BUCKET).remove([row.audio_path]);
   }
-  const { error } = await admin.from("messages").delete().eq("id", id);
+  const { error } = await admin
+    .from("messages")
+    .delete()
+    .eq("id", id)
+    .eq("event_id", eventId);
   if (error) throw error;
 }

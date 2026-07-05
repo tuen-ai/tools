@@ -65,7 +65,7 @@ export async function deleteChallengeAction(
     throw err;
   }
   const admin = createAdminClient();
-  await deleteChallenge(admin, parsed.data.challengeId);
+  await deleteChallenge(admin, parsed.data.eventId, parsed.data.challengeId);
   revalidatePath(`/admin/${parsed.data.eventId}/challenges`);
   return { ok: true };
 }

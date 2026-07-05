@@ -34,6 +34,7 @@ const NEW_TOAST_MS = 4500;      // "New from a guest" banner duration
 const IDLE_CURSOR_MS = 3000;    // hide cursor after this idle time
 const WALL_MAX_TILES = 80;      // cap DOM size on long receptions
 const WALL_FRESH_MS = 6000;     // highlight window for new wall tiles
+const URL_REFRESH_MS = 20 * 60 * 1000; // re-sign before the 30-min TTL lapses
 
 export function SlideshowClient({
   lang,
@@ -98,6 +99,38 @@ export function SlideshowClient({
       }
     }
     const t = window.setInterval(pump, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
+  }, [eventSlug]);
+
+  // Re-sign every slide's URL periodically. Signed URLs expire after 30
+  // min; a venue projector / photo wall runs for hours, so without this
+  // any slide not served from browser cache goes black mid-reception.
+  useEffect(() => {
+    let cancelled = false;
+    async function resign() {
+      try {
+        const res = await fetch(
+          `/api/event/${eventSlug}/slideshow?limit=500`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as SlideResponse;
+        if (cancelled || !data.slides) return;
+        const freshUrl = new Map(data.slides.map((s) => [s.id, s.url]));
+        setSlides((prev) =>
+          prev.map((s) => {
+            const u = freshUrl.get(s.id);
+            return u ? { ...s, url: u } : s;
+          }),
+        );
+      } catch {
+        // next tick will retry
+      }
+    }
+    const t = window.setInterval(resign, URL_REFRESH_MS);
     return () => {
       cancelled = true;
       window.clearInterval(t);
@@ -290,7 +323,7 @@ function SlideLayer({ slide, entering }: { slide: Slide; entering: boolean }) {
         autoPlay
         muted
         playsInline
-        className={`absolute inset-0 w-full h-full object-contain bg-black ${fade}`}
+        className={`absolute inset-0 w-full h-full object-contain bg-ink-900 ${fade}`}
       />
     );
   }

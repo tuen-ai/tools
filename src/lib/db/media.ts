@@ -28,6 +28,8 @@ export interface ListMediaPageArgs {
   statuses?: MediaStatus[];
   /** When set, only media tagged with this table. */
   tableId?: string;
+  /** When set, only media tagged with this photo challenge. */
+  challengeId?: string;
 }
 
 export interface MediaPage {
@@ -37,7 +39,7 @@ export interface MediaPage {
 
 export async function listMediaPage(
   client: SupabaseClient<Database>,
-  { eventId, offset, limit, statuses, tableId }: ListMediaPageArgs,
+  { eventId, offset, limit, statuses, tableId, challengeId }: ListMediaPageArgs,
 ): Promise<MediaPage> {
   const filterStatuses = statuses ?? ["visible", "hidden"];
   let q = client
@@ -46,6 +48,7 @@ export async function listMediaPage(
     .eq("event_id", eventId)
     .in("status", filterStatuses);
   if (tableId) q = q.eq("table_id", tableId);
+  if (challengeId) q = q.eq("challenge_id", challengeId);
   const { data, count, error } = await q
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
@@ -85,6 +88,12 @@ export interface SignedThumb {
   id: string;
   url: string;
 }
+
+// Admin gallery / dashboard stay open for hours during a reception, so
+// their thumbnail URLs must outlive the default 5-min TTL or tiles below
+// the fold (and re-opened modals) render broken. Admin-only URLs, safe to
+// be long-lived; the <img onError> refetch is the backstop.
+export const ADMIN_THUMB_TTL_SEC = 6 * 60 * 60; // 6 hours
 
 /**
  * Batch-mint signed URLs for a page of media. For images, applies a

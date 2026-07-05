@@ -40,7 +40,7 @@ export function CreateTableForm({
           maxLength={64}
           placeholder={t.tableLabelPlaceholder}
           disabled={pending}
-          className="flex-1 min-w-[12rem] rounded-xl border border-cream-200 bg-cream-50 px-4 py-2.5 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="flex-1 min-w-[12rem] rounded-xl border border-cream-200 bg-cream-50 px-4 py-2.5 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
         <button
           type="submit"

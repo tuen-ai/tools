@@ -3,7 +3,11 @@ import Link from "next/link";
 import { requireEventAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventById, getEventStats } from "@/lib/db/events";
-import { listMediaPage, signThumbnailUrls } from "@/lib/db/media";
+import {
+  listMediaPage,
+  signThumbnailUrls,
+  ADMIN_THUMB_TTL_SEC,
+} from "@/lib/db/media";
 import { listMessagesPage } from "@/lib/db/messages";
 import { listTables } from "@/lib/db/tables";
 import { listChallenges } from "@/lib/db/challenges";
@@ -49,7 +53,9 @@ export default async function EventDashboardPage({ params }: Props) {
     return <div className="text-ink-500">{t.eventNotFound}</div>;
   }
 
-  const signed = await signThumbnailUrls(admin, page.rows);
+  const signed = await signThumbnailUrls(admin, page.rows, {
+    expiresInSec: ADMIN_THUMB_TTL_SEC,
+  });
   const thumbMap = new Map(signed.map((s) => [s.id, s.url]));
 
   const statItems: {

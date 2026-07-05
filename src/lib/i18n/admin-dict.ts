@@ -72,6 +72,12 @@ export interface AdminDict {
   tileHidden: string;
   tileVideo: string;
   modalDownload: string;
+  selectMode: string;
+  selectCancel: string;
+  bulkSelected: (n: number) => string;
+  bulkHide: string;
+  bulkDelete: string;
+  bulkDeleteConfirm: (n: number) => string;
   modalHide: string;
   modalUnhide: string;
   modalDelete: string;
@@ -252,6 +258,12 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     tileHidden: "已隱藏",
     tileVideo: "短片",
     modalDownload: "下載",
+    selectMode: "選取",
+    selectCancel: "取消",
+    bulkSelected: (n) => `已選 ${n}`,
+    bulkHide: "隱藏",
+    bulkDelete: "刪除",
+    bulkDeleteConfirm: (n) => `確定刪除 ${n} 張相片?可於 7 日內還原。`,
     modalHide: "隱藏",
     modalUnhide: "取消隱藏",
     modalDelete: "刪除",
@@ -443,6 +455,13 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     tileHidden: "Hidden",
     tileVideo: "Video",
     modalDownload: "Download",
+    selectMode: "Select",
+    selectCancel: "Cancel",
+    bulkSelected: (n) => `${n} selected`,
+    bulkHide: "Hide",
+    bulkDelete: "Delete",
+    bulkDeleteConfirm: (n) =>
+      `Delete ${n} photo${n === 1 ? "" : "s"}? Recoverable for 7 days.`,
     modalHide: "Hide",
     modalUnhide: "Unhide",
     modalDelete: "Delete",

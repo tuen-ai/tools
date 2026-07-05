@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { assertEventAdmin, AuthorizationError } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { listMediaPage, signThumbnailUrls } from "@/lib/db/media";
+import {
+  listMediaPage,
+  signThumbnailUrls,
+  ADMIN_THUMB_TTL_SEC,
+} from "@/lib/db/media";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +16,7 @@ const QuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(100_000),
   limit: z.coerce.number().int().min(1).max(120),
   table: z.string().uuid().optional(),
+  challenge: z.string().uuid().optional(),
 });
 
 interface RouteContext {
@@ -34,6 +39,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     offset: url.searchParams.get("offset") ?? "0",
     limit: url.searchParams.get("limit") ?? "60",
     table: url.searchParams.get("table") ?? undefined,
+    challenge: url.searchParams.get("challenge") ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_query" }, { status: 400 });
@@ -45,8 +51,11 @@ export async function GET(request: Request, { params }: RouteContext) {
     offset: parsed.data.offset,
     limit: parsed.data.limit,
     tableId: parsed.data.table,
+    challengeId: parsed.data.challenge,
   });
-  const thumbs = await signThumbnailUrls(admin, page.rows);
+  const thumbs = await signThumbnailUrls(admin, page.rows, {
+    expiresInSec: ADMIN_THUMB_TTL_SEC,
+  });
 
   return NextResponse.json({
     rows: page.rows,

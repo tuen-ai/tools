@@ -94,6 +94,13 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
     <main className="relative min-h-dvh flex flex-col items-center px-5 py-8 sm:py-12 overflow-hidden">
       <GuestScatter />
       <div className="relative z-10 w-full max-w-md animate-[fadeup_500ms_ease-out]">
+        {/* Language switch up top where it's easy to find — a guest whose
+            phone reports the wrong Accept-Language shouldn't have to scroll
+            past the whole form to change it. */}
+        <div className="flex justify-end mb-3">
+          <LanguageSwitch current={lang} basePath={`/e/${event.slug}`} />
+        </div>
+
         {coverUrl ? (
           <div className="mb-6 overflow-hidden rounded-3xl shadow-soft animate-[fadeup_700ms_ease-out]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -146,10 +153,6 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
         ) : (
           <ClosedScreen lang={lang} />
         )}
-
-        <div className="mt-8">
-          <LanguageSwitch current={lang} basePath={`/e/${event.slug}`} />
-        </div>
       </div>
     </main>
   );

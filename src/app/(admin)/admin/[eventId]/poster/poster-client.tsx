@@ -98,18 +98,18 @@ function MinimalTemplate(p: TemplateProps) {
           {p.coupleNames}
         </h1>
         {p.eventDate ? (
-          <p className="mt-3 text-ink-500 text-sm">{p.eventDate}</p>
+          <p className="mt-3 text-ink-700 text-sm">{p.eventDate}</p>
         ) : null}
       </header>
 
       <div className="flex flex-col items-center">
         <div
-          className="bg-white rounded-3xl p-6 shadow-soft"
+          className="bg-white rounded-lg p-6 shadow-soft print:shadow-none"
            
           dangerouslySetInnerHTML={{ __html: p.qrSvg }}
         />
         <p className="mt-6 text-ink-700 text-sm">{p.scanInstruction}</p>
-        <p className="mt-2 font-mono text-[10px] text-ink-500 break-all max-w-xs">
+        <p className="mt-2 font-mono text-[10px] text-ink-700 break-all max-w-xs">
           {p.url}
         </p>
       </div>
@@ -137,7 +137,7 @@ function PhotoTemplate(p: TemplateProps) {
 
       {/* QR card section */}
       <div className="flex-1 flex flex-col items-center justify-center text-center px-10 -mt-12 relative z-10">
-        <div className="bg-white rounded-3xl shadow-soft p-7 max-w-md w-full">
+        <div className="bg-white rounded-lg shadow-soft print:shadow-none p-7 max-w-md w-full">
           <p
             className="uppercase tracking-[0.3em] text-[9px] mb-2"
             style={{ color: p.primaryColor }}
@@ -148,7 +148,7 @@ function PhotoTemplate(p: TemplateProps) {
             {p.coupleNames}
           </h1>
           {p.eventDate ? (
-            <p className="text-ink-500 text-xs mb-4">{p.eventDate}</p>
+            <p className="text-ink-700 text-xs mb-4">{p.eventDate}</p>
           ) : null}
           <div
             className="mx-auto inline-block"
@@ -157,7 +157,7 @@ function PhotoTemplate(p: TemplateProps) {
             dangerouslySetInnerHTML={{ __html: p.qrSvg }}
           />
           <p className="mt-4 text-ink-700 text-sm">{p.scanInstruction}</p>
-          <p className="mt-1 font-mono text-[9px] text-ink-500 break-all">
+          <p className="mt-1 font-mono text-[9px] text-ink-700 break-all">
             {p.url}
           </p>
         </div>
@@ -172,11 +172,11 @@ function OrnateTemplate(p: TemplateProps) {
     <div className="h-full w-full relative flex flex-col items-center justify-center text-center px-16 py-20">
       {/* Decorative inner border */}
       <div
-        className="absolute inset-8 rounded-[2.5rem] border-2"
+        className="absolute inset-8 rounded-sm border-2"
         style={{ borderColor: p.primaryColor, opacity: 0.5 }}
       />
       <div
-        className="absolute inset-10 rounded-[2.25rem] border"
+        className="absolute inset-10 rounded-sm border"
         style={{ borderColor: p.primaryColor, opacity: 0.3 }}
       />
 
@@ -207,7 +207,7 @@ function OrnateTemplate(p: TemplateProps) {
           {p.coupleNames}
         </h1>
         {p.eventDate ? (
-          <p className="mt-3 text-ink-500 text-sm tracking-widest">
+          <p className="mt-3 text-ink-700 text-sm tracking-widest">
             {p.eventDate}
           </p>
         ) : null}
@@ -221,7 +221,7 @@ function OrnateTemplate(p: TemplateProps) {
 
       <div className="relative z-10 flex flex-col items-center">
         <div
-          className="rounded-3xl p-6 shadow-soft"
+          className="rounded-lg p-6 shadow-soft print:shadow-none"
           style={{ background: "#FFFFFF", border: `1px solid ${tint}` }}
 
           dangerouslySetInnerHTML={{ __html: p.qrSvg }}
@@ -232,7 +232,7 @@ function OrnateTemplate(p: TemplateProps) {
         >
           {p.scanInstruction}
         </p>
-        <p className="mt-1 font-mono text-[9px] text-ink-500 break-all max-w-xs">
+        <p className="mt-1 font-mono text-[9px] text-ink-700 break-all max-w-xs">
           {p.url}
         </p>
       </div>

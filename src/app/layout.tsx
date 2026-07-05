@@ -37,7 +37,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: pinch-zoom must stay enabled (WCAG 1.4.4) so older
+  // guests can zoom the couple's welcome message. 16px inputs (below) are
+  // what actually prevent iOS's focus-zoom, not a locked scale.
   themeColor: "#F5EDDE",
 };
 

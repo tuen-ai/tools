@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { insertMessage } from "@/lib/db/messages";
+import { takeToken, getClientIp } from "@/lib/rate-limit";
 import { STORAGE_BUCKET } from "@/lib/upload/constants";
 
 export const runtime = "nodejs";
@@ -17,22 +18,48 @@ const BodySchema = z.object({
   body: z.string().trim().min(1).max(500).optional().nullable(),
 });
 
+const FINALIZE_RATE_LIMIT = { capacity: 20, refillPerSec: 0.5 } as const;
+
 export async function POST(request: Request) {
-  let parsed;
-  try {
-    parsed = BodySchema.parse(await request.json());
-  } catch (err) {
+  const rl = takeToken(
+    `audio-finalize:${getClientIp(request)}`,
+    FINALIZE_RATE_LIMIT,
+  );
+  if (!rl.ok) {
     return NextResponse.json(
-      { error: "invalid_request", details: (err as Error).message },
-      { status: 400 },
+      { error: "rate_limited" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
     );
   }
 
-  if (!parsed.storagePath.includes(parsed.messageId)) {
+  let parsed;
+  try {
+    parsed = BodySchema.parse(await request.json());
+  } catch {
+    return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+  }
+
+  // Pin the object to THIS event's audio folder + the claimed messageId,
+  // so a client can't file audio under another event or a foreign id.
+  const expectedPrefix = `events/${parsed.eventId}/audio/${parsed.messageId}.`;
+  if (!parsed.storagePath.startsWith(expectedPrefix)) {
     return NextResponse.json({ error: "path_mismatch" }, { status: 400 });
   }
 
   const admin = createAdminClient();
+
+  // The guest row must belong to this event.
+  const { data: guest } = await admin
+    .from("guests")
+    .select("id, event_id")
+    .eq("id", parsed.guestId)
+    .maybeSingle();
+  if (!guest || guest.event_id !== parsed.eventId) {
+    return NextResponse.json({ error: "guest_mismatch" }, { status: 403 });
+  }
 
   const folder = parsed.storagePath.substring(
     0,
@@ -44,10 +71,8 @@ export async function POST(request: Request) {
     .from(STORAGE_BUCKET)
     .list(folder, { search: filename, limit: 1 });
   if (listErr) {
-    return NextResponse.json(
-      { error: "storage_error", details: listErr.message },
-      { status: 502 },
-    );
+    console.error("audio finalize storage list failed", listErr.message);
+    return NextResponse.json({ error: "storage_error" }, { status: 502 });
   }
   const object = listing?.find((o) => o.name === filename);
   if (!object) {
@@ -71,9 +96,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ id });
   } catch (err) {
-    return NextResponse.json(
-      { error: "insert_failed", details: (err as Error).message },
-      { status: 500 },
-    );
+    console.error("audio finalize insert failed", (err as Error).message);
+    return NextResponse.json({ error: "insert_failed" }, { status: 500 });
   }
 }

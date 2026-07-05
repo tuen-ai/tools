@@ -48,20 +48,24 @@ export function LanguageSwitch({ current, basePath, tone = "default" }: Props) {
     });
   }
 
-  const inactiveClass =
+  // Segmented pill with real tap targets (≥40px) — the previous bare 11px
+  // text buttons were hard to find and hard to hit on a phone.
+  const container =
     tone === "dark"
-      ? "text-white/50 hover:text-white"
-      : tone === "muted"
-        ? "text-ink-700/80 hover:text-ink-900"
-        : "text-ink-700 hover:text-ink-900";
+      ? "bg-white/10 border border-white/20"
+      : "bg-cream-100 border border-cream-200";
   const activeClass =
     tone === "dark"
-      ? "text-white font-semibold"
-      : "text-ink-900 font-semibold";
+      ? "bg-white text-ink-900 font-semibold"
+      : "bg-white text-ink-900 font-semibold shadow-sm";
+  const inactiveClass =
+    tone === "dark"
+      ? "text-white/70 hover:text-white"
+      : "text-ink-700 hover:text-ink-900";
 
   return (
     <div
-      className="inline-flex items-center gap-3 text-[11px]"
+      className={`inline-flex items-center rounded-full p-0.5 ${container}`}
       role="group"
       aria-label={current === "zh-Hant" ? "語言" : "Language"}
     >
@@ -71,9 +75,10 @@ export function LanguageSwitch({ current, basePath, tone = "default" }: Props) {
           type="button"
           onClick={() => pick(code)}
           disabled={pending}
-          className={`transition ${
+          aria-pressed={code === current}
+          className={`rounded-full px-3.5 py-2 text-xs transition disabled:opacity-60 ${
             code === current ? activeClass : inactiveClass
-          } disabled:opacity-60`}
+          }`}
         >
           {LANGUAGE_LABELS[code]}
         </button>
