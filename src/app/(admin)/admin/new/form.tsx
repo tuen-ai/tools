@@ -25,7 +25,7 @@ export function NewEventForm({ lang }: { lang: Lang }) {
           required
           maxLength={120}
           placeholder={t.formCoupleNamesPlaceholder}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </Field>
 
@@ -42,7 +42,7 @@ export function NewEventForm({ lang }: { lang: Lang }) {
           required
           pattern="^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$"
           placeholder={t.formUrlSlugPlaceholder}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition font-mono text-sm"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition font-mono"
         />
       </Field>
 
@@ -51,7 +51,7 @@ export function NewEventForm({ lang }: { lang: Lang }) {
           id="event_date"
           name="event_date"
           type="date"
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition"
         />
       </Field>
 
@@ -62,7 +62,7 @@ export function NewEventForm({ lang }: { lang: Lang }) {
           maxLength={500}
           rows={3}
           placeholder={t.formWelcomePlaceholder}
-          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition resize-none"
+          className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition resize-none"
         />
       </Field>
 

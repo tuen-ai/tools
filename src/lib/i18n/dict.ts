@@ -20,8 +20,12 @@ export interface Dict {
   chooseHelp: (max: number) => string;
   changePhotos: string;
   addMorePhotos: string;
+  fileMeta: (isVideo: boolean, sizeMB: string) => string;
+  removeFile: string;
   send: (count: number) => string;
   sending: (done: number, total: number) => string;
+  uploadingKeepOpen: string;
+  retryFailed: (n: number) => string;
   privacyNote: (perGuest: number) => string;
   myUploadsHeading: (n: number) => string;
   thanksTitle: string;
@@ -56,6 +60,23 @@ export interface Dict {
   errOverSize: (name: string) => string;
   errVideoTooLong: (name: string) => string;
   errTruncated: (max: number) => string;
+  errQuota: string;
+  errRateLimited: string;
+  errUploadsClosed: string;
+  errUploadGeneric: string;
+}
+
+// Maps a server error CODE (or a raw network error message) to a localised,
+// guest-friendly string. Unknown codes fall back to the generic retry copy
+// rather than leaking "quota_exceeded" / "insert_failed" to the guest.
+export function lookupUploadError(t: Dict, codeOrMessage: string): string {
+  const c = codeOrMessage.toLowerCase();
+  if (c.includes("quota")) return t.errQuota;
+  if (c.includes("rate_limited") || c.includes("429")) return t.errRateLimited;
+  if (c.includes("uploads_closed") || c.includes("closed")) {
+    return t.errUploadsClosed;
+  }
+  return t.errUploadGeneric;
 }
 
 export const DICT: Record<Lang, Dict> = {
@@ -71,9 +92,13 @@ export const DICT: Record<Lang, Dict> = {
       `Photos or videos (under 30s) · up to ${max} at a time`,
     changePhotos: "Change photos",
     addMorePhotos: "Add more",
+    fileMeta: (isVideo, mb) => `${isVideo ? "Video" : "Photo"} · ${mb} MB`,
+    removeFile: "Remove",
     send: (count) =>
       `Send ${count} photo${count === 1 ? "" : "s"}`,
     sending: (done, total) => `Sending… ${done}/${total}`,
+    uploadingKeepOpen: "Uploading — please keep this page open.",
+    retryFailed: (n) => `Retry ${n} that failed`,
     privacyNote: (perGuest) =>
       `Up to ${perGuest} photos per guest. Your photos are private to the couple.`,
     myUploadsHeading: (n) =>
@@ -116,6 +141,10 @@ export const DICT: Record<Lang, Dict> = {
     errOverSize: (name) => `${name}: file too large`,
     errVideoTooLong: (name) => `${name}: video over 30 seconds`,
     errTruncated: (max) => `Only the first ${max} photos were added.`,
+    errQuota: "You've reached the upload limit for this wedding — thank you!",
+    errRateLimited: "Too many uploads at once — please wait a moment and retry.",
+    errUploadsClosed: "The couple has closed photo uploads.",
+    errUploadGeneric: "Something went wrong — please try again.",
   },
   "zh-Hant": {
     eyebrow: "婚禮相片分享",
@@ -129,8 +158,12 @@ export const DICT: Record<Lang, Dict> = {
       `相片或短片(30 秒以內) · 每次最多 ${max} 個`,
     changePhotos: "更換相片",
     addMorePhotos: "新增相片",
+    fileMeta: (isVideo, mb) => `${isVideo ? "短片" : "相片"} · ${mb} MB`,
+    removeFile: "移除",
     send: (count) => `傳送 ${count} 張相片`,
     sending: (done, total) => `傳送中… ${done}/${total}`,
+    uploadingKeepOpen: "上傳緊 — 請唔好閂呢一頁。",
+    retryFailed: (n) => `重試失敗嘅 ${n} 張`,
     privacyNote: (perGuest) =>
       `每位賓客最多 ${perGuest} 張。您的相片只有新人會看到。`,
     myUploadsHeading: (n) => `您已分享 ${n} 張相片 — 多謝您!`,
@@ -167,5 +200,9 @@ export const DICT: Record<Lang, Dict> = {
     errOverSize: (name) => `${name}:檔案太大`,
     errVideoTooLong: (name) => `${name}:短片超過 30 秒`,
     errTruncated: (max) => `只加入了前 ${max} 個。`,
+    errQuota: "您已達到這場婚禮的上傳上限 — 多謝您!",
+    errRateLimited: "一次上傳太多,請稍等一會再試。",
+    errUploadsClosed: "新人已關閉相片上傳。",
+    errUploadGeneric: "出咗少少問題,請再試一次。",
   },
 };

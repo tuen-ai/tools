@@ -1,6 +1,13 @@
 import { LANGUAGES, type Lang } from "./dict";
 
-export { LANGUAGES, LANGUAGE_LABELS, DICT, type Lang, type Dict } from "./dict";
+export {
+  LANGUAGES,
+  LANGUAGE_LABELS,
+  DICT,
+  lookupUploadError,
+  type Lang,
+  type Dict,
+} from "./dict";
 
 /** Cookie name used to persist the user's language choice. */
 export const LANG_COOKIE = "wgp.lang";

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { DICT, type Lang } from "@/lib/i18n";
+import { DICT, lookupUploadError, type Lang } from "@/lib/i18n";
 import {
   HttpError,
   isRetryableStatus,
@@ -243,12 +243,14 @@ export function AudioRecorder({
       resetAfterSend();
     } catch (err) {
       setPhase("error");
-      setError((err as Error).message);
+      setError(lookupUploadError(t, (err as Error).message));
     }
   }
 
+  // One button shape (letterpress .btn-candy); a custom theme colour just
+  // overrides the fill via inline style.
   const primaryStyle = primaryColor
-    ? { backgroundColor: primaryColor }
+    ? { backgroundColor: primaryColor, boxShadow: "none" }
     : undefined;
 
   return (
@@ -257,11 +259,7 @@ export function AudioRecorder({
         <button
           type="button"
           onClick={startRecording}
-          className={
-            primaryColor
-              ? "w-full rounded-full px-4 py-4 text-white text-sm font-medium hover:brightness-90 transition flex items-center justify-center gap-2"
-              : "w-full btn-candy px-4 py-4 text-sm flex items-center justify-center gap-2"
-          }
+          className="w-full btn-candy px-4 py-4 text-sm flex items-center justify-center gap-2"
           style={primaryStyle}
         >
           <RecDot active /> {hasExistingClips ? t.recRecordAnother : t.recStart}
@@ -288,7 +286,7 @@ export function AudioRecorder({
           <button
             type="button"
             onClick={stopRecording}
-            className="btn-candy px-5 py-2.5 text-sm"
+            className="btn-candy px-8 py-3.5 text-base"
           >
             {t.recStop}
           </button>
@@ -314,11 +312,7 @@ export function AudioRecorder({
             <button
               type="button"
               onClick={send}
-              className={
-                primaryColor
-                  ? "flex-1 rounded-full px-4 py-3 text-white text-sm font-medium hover:brightness-90 transition"
-                  : "flex-1 btn-candy px-4 py-3 text-sm"
-              }
+              className="flex-1 btn-candy px-4 py-3 text-sm"
               style={primaryStyle}
             >
               {t.recSend}
@@ -338,7 +332,15 @@ export function AudioRecorder({
           {error}
           <button
             type="button"
-            onClick={discard}
+            // On a SEND failure the recording is still in state — return to
+            // preview so the guest can re-send or re-record WITHOUT losing
+            // their 30-second clip. Only a mic-permission error (no blob)
+            // resets to idle.
+            onClick={() => {
+              setError(null);
+              if (blob) setPhase("preview");
+              else discard();
+            }}
             className="ml-2 underline"
           >
             {t.retry}
