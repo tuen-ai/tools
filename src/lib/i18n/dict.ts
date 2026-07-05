@@ -13,7 +13,6 @@ export interface Dict {
   eyebrow: string;
   yourName: string;
   optional: string;
-  yourNamePlaceholder: string;
   messageLabel: string;
   messagePlaceholder: string;
   challengesLabel: string;
@@ -64,7 +63,6 @@ export const DICT: Record<Lang, Dict> = {
     eyebrow: "Wedding photo sharing",
     yourName: "Your name",
     optional: "(optional)",
-    yourNamePlaceholder: "e.g. Aunt Linda",
     messageLabel: "Leave a message",
     messagePlaceholder: "A short note for the couple…",
     challengesLabel: "Photo challenge",
@@ -123,7 +121,6 @@ export const DICT: Record<Lang, Dict> = {
     eyebrow: "婚禮相片分享",
     yourName: "您的稱呼",
     optional: "（選填）",
-    yourNamePlaceholder: "例如:阿姨",
     messageLabel: "留言給新人",
     messagePlaceholder: "寫幾句祝福的話…",
     challengesLabel: "相片任務",
