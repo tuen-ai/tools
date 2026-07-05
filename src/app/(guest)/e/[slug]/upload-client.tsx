@@ -334,7 +334,6 @@ export function UploadClient({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={t.yourNamePlaceholder}
           maxLength={64}
           disabled={isUploading}
           className="mt-1.5 w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-[15px] outline-none focus:border-blush-500 focus:bg-white transition"
