@@ -199,6 +199,10 @@ export type Database = {
           label: string;
         }>;
       };
+      whoami: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
     };
     Enums: {
       media_status: MediaStatus;
