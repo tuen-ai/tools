@@ -46,16 +46,18 @@ export async function createEventAction(
   const { user } = await requireSession();
   const supabase = await createSupabaseServerClient();
 
+  // redirect() works by THROWING (NEXT_REDIRECT) — it must live outside
+  // the try/catch or the catch swallows the navigation and shows
+  // "NEXT_REDIRECT" to the user as if creation had failed.
+  let row;
   try {
-    const row = await createEvent(supabase, {
+    row = await createEvent(supabase, {
       slug: parsed.data.slug,
       couple_names: parsed.data.couple_names,
       event_date: parsed.data.event_date ?? null,
       welcome_message: parsed.data.welcome_message ?? null,
       created_by: user.id,
     });
-    revalidatePath("/admin");
-    redirect(`/admin/${row.id}`);
   } catch (err) {
     const msg = (err as Error).message;
     if (msg.includes("events_slug_key") || msg.includes("duplicate")) {
@@ -63,4 +65,6 @@ export async function createEventAction(
     }
     return { ok: false, error: msg };
   }
+  revalidatePath("/admin");
+  redirect(`/admin/${row.id}`);
 }
