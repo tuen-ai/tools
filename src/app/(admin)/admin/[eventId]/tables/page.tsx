@@ -12,6 +12,7 @@ import { QR_DARK, QR_LIGHT } from "@/lib/theme";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import { TableIcon } from "@/components/ui/icons";
+import { PrintButton } from "../qr/print-button";
 import { CreateTableForm } from "./create-form";
 import { DeleteTableButton } from "./delete-button";
 
@@ -60,12 +61,15 @@ export default async function TablesPage({ params }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link
-        href={`/admin/${eventId}`}
-        className="inline-block text-sm text-ink-500 hover:text-ink-900 mb-4 print:hidden"
-      >
-        {t.backToPhotos}
-      </Link>
+      <div className="flex items-center justify-between mb-4 print:hidden">
+        <Link
+          href={`/admin/${eventId}`}
+          className="text-sm text-ink-700 hover:text-ink-900"
+        >
+          {t.backToPhotos}
+        </Link>
+        {tables.length > 0 ? <PrintButton lang={lang} /> : null}
+      </div>
       <header className="mb-6 print:hidden">
         <h1 className="font-serif text-2xl text-ink-900">{t.tablesHeading}</h1>
         <p className="text-sm text-ink-500 mt-1">{t.tablesSubtitle}</p>
@@ -83,23 +87,31 @@ export default async function TablesPage({ params }: Props) {
           <p className="text-ink-500 text-sm">{t.tablesEmpty}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 print:grid-cols-3">
+        // Print: 2×N cut-out table cards per A4 — dashed borders double as
+        // cut lines; each card is self-contained (couple names + scan
+        // instruction) so it works standing alone on the table.
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 print:mt-0 print:grid-cols-2 print:gap-0">
           {qrs.map(({ table, url, svg }) => (
             <div
               key={table.id}
-              className="bg-white rounded-2xl border border-cream-200 p-4 text-center break-inside-avoid print:border-ink-500"
+              className="bg-white rounded-2xl border border-cream-200 p-4 text-center break-inside-avoid print:rounded-none print:border-dashed print:border-ink-500 print:p-8"
             >
+              <p className="font-serif text-sm text-ink-700 mb-1 print:text-base">
+                {event.couple_names}
+              </p>
               <p className="uppercase tracking-[0.2em] text-[10px] text-blush-700 mb-1">
                 {t.tableLabel}
               </p>
-              <h2 className="font-serif text-2xl text-ink-900 mb-3 break-words">
+              <h2 className="font-serif text-2xl text-ink-900 mb-3 break-words print:text-3xl">
                 {table.label}
               </h2>
               <div
                 className="mx-auto inline-block mb-3"
-                 
                 dangerouslySetInnerHTML={{ __html: svg }}
               />
+              <p className="text-[11px] text-ink-700 mb-1 hidden print:block">
+                {t.qrScanInstruction}
+              </p>
               <p className="font-mono text-[9px] text-ink-500 break-all">{url}</p>
               <div className="mt-3 print:hidden">
                 <DeleteTableButton
