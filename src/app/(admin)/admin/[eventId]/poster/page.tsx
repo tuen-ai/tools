@@ -96,7 +96,7 @@ export default async function PosterPage({ params }: Props) {
       <style>{`
         @media print {
           @page { size: A4 portrait; margin: 0; }
-          html, body { background: #FFF6F2 !important; }
+          html, body { background: #F5EDDE !important; }
         }
       `}</style>
     </div>

@@ -295,7 +295,7 @@ export function UploadClient({
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-soft p-6 sm:p-8 space-y-5">
+    <div className="frame-vintage shadow-soft p-6 sm:p-8 space-y-5">
       {myUploads && myUploads.count > 0 ? (
         <div className="rounded-xl bg-sage-500/10 p-3">
           <p className="text-[11px] font-medium text-sage-700 mb-2">
@@ -495,9 +495,9 @@ export function UploadClient({
       {items.length === 0 ? (
         <label
           htmlFor="wgp-file-input"
-          className="block cursor-pointer rounded-2xl border-2 border-dashed border-blush-400 bg-blush-400/10 px-6 py-10 text-center transition hover:bg-blush-400/15"
+          className="block cursor-pointer rounded-lg border-2 border-dashed border-sage-600 bg-sage-500/10 px-6 py-10 text-center transition hover:bg-sage-500/15"
         >
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white text-blush-500 shadow-soft animate-[bob_2.6s_ease-in-out_infinite]">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white text-sage-700 shadow-soft animate-[bob_2.6s_ease-in-out_infinite]">
             <CameraIcon className="h-7 w-7" />
           </div>
           <div className="font-serif text-lg text-ink-900">
@@ -663,9 +663,10 @@ function StatusBadge({ status }: { status: UploadItem["status"] }) {
 }
 
 // Candy confetti — strawberry, peach, butter, mint, lavender, sky.
+// Vintage confetti — burgundy, mustard, teal, terracotta, plum, parchment.
 const CONFETTI_COLORS = [
-  "#FF8FA3", "#FFB9C8", "#FFC9A8",
-  "#FFE08A", "#A8E0C8", "#CDBDF0", "#AFD4F2",
+  "#7C3030", "#C98A8A", "#D9A441",
+  "#3E6E64", "#C97F5C", "#B79AB4", "#EFE4CD",
 ];
 
 function Confetti({ count = 32 }: { count?: number }) {
@@ -716,7 +717,7 @@ function ThankYou({
   return (
     <>
       {showConfetti ? <Confetti /> : null}
-      <div className="bg-white rounded-3xl shadow-soft p-8 text-center animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]">
+      <div className="frame-vintage shadow-soft p-8 text-center animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]">
         <div
           className="mx-auto mb-4 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full animate-[bob_2.6s_ease-in-out_infinite]"
           style={

@@ -3,38 +3,52 @@
 @tailwind utilities;
 
 @layer components {
-  /* Squishy candy buttons — the signature cute affordance. The solid
-     bottom shadow reads as a pressable 3D edge; it compresses on :active.
-     Callers still bring their own padding / text-size utilities. */
+  /* Vintage press buttons — flat burgundy with a letterpress bottom edge
+     that compresses on :active. (Class names kept from the candy theme so
+     call sites don't churn.) White label on blush-500 is 9.0:1. Callers
+     still bring their own padding / text-size utilities. */
   .btn-candy {
-    @apply rounded-full font-medium text-white transition;
-    /* Deep-raspberry gradient: white label clears WCAG AA (≥4.5:1) on both
-       stops (#CC4060 = 4.7:1, blush-700 = 5.5:1) while still reading as a
-       warm candy button. The solid darker bottom edge is the 3D lip. */
-    background-image: linear-gradient(180deg, #CC4060, theme("colors.blush.700"));
-    box-shadow: 0 4px 0 #9E2742,
-      0 10px 20px -6px rgba(192, 51, 85, 0.45);
+    @apply rounded font-medium text-white transition tracking-wider;
+    background-color: theme("colors.blush.500");
+    box-shadow: 0 4px 0 theme("colors.blush.600"),
+      0 10px 20px -8px rgba(94, 34, 34, 0.45);
   }
-  .btn-candy:hover { filter: brightness(1.05); }
+  .btn-candy:hover { filter: brightness(1.08); }
   .btn-candy:active {
     transform: translateY(2px);
-    box-shadow: 0 2px 0 #9E2742,
-      0 6px 14px -6px rgba(192, 51, 85, 0.45);
+    box-shadow: 0 2px 0 theme("colors.blush.600"),
+      0 6px 14px -8px rgba(94, 34, 34, 0.45);
   }
   .btn-candy:disabled {
     opacity: 0.6;
     transform: none;
   }
 
-  /* Soft secondary button — tinted, with a gentler pressable edge. */
+  /* Soft secondary button — parchment tinted, gentler pressable edge. */
   .btn-soft {
-    @apply rounded-full font-medium text-ink-700 transition;
-    background-color: theme("colors.cream.200");
-    box-shadow: 0 3px 0 #F4CBD6;
+    @apply rounded font-medium text-ink-700 transition;
+    background-color: theme("colors.cream.100");
+    border: 1.5px solid theme("colors.cream.200");
+    box-shadow: 0 3px 0 theme("colors.cream.200");
   }
   .btn-soft:active {
     transform: translateY(2px);
-    box-shadow: 0 1px 0 #F4CBD6;
+    box-shadow: 0 1px 0 theme("colors.cream.200");
+  }
+
+  /* Double-line invitation frame — design E's signature. Outer 2px rule,
+     inner hairline via ::before. Apply to the guest-facing cards. */
+  .frame-vintage {
+    position: relative;
+    border: 2px solid theme("colors.blush.500");
+    background: #FBF6EA;
+  }
+  .frame-vintage::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px solid theme("colors.blush.500");
+    pointer-events: none;
   }
 }
 
@@ -48,13 +62,13 @@
   }
   body {
     @apply bg-cream-50 text-ink-900 font-sans;
-    /* Soft candy warmth so large cream areas glow rather than read flat. */
-    background-image: radial-gradient(
-      120% 80% at 50% -10%,
-      rgba(255, 143, 163, 0.12) 0%,
-      transparent 60%
+    /* Faint horizontal grain so large paper areas read as stock, not flat
+       fill. Kept at ~1% alpha — texture, not stripes. */
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent 0 3px,
+      rgba(120, 90, 40, 0.012) 3px 4px
     );
-    background-attachment: fixed;
   }
 
   /* Keyboard focus: a soft blush ring on anything interactive. Mouse
@@ -68,7 +82,7 @@
   [tabindex]:focus-visible {
     outline: 2px solid theme("colors.blush.500");
     outline-offset: 2px;
-    border-radius: 0.5rem;
+    border-radius: 0.25rem;
   }
 }
 

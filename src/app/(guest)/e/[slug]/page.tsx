@@ -108,8 +108,8 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
         <header className="text-center mb-8">
           {tableLabel ? (
             <p
-              className={`inline-block text-[11px] font-medium px-3 py-1 rounded-full mb-3 ${
-                primaryColor ? "text-white" : "bg-blush-500/10 text-blush-700"
+              className={`inline-block text-[11px] font-semibold tracking-widest px-3 py-1.5 rounded-md mb-3 rotate-2 border-2 border-dashed ${
+                primaryColor ? "text-white border-white/50" : "text-blush-700 border-blush-700"
               }`}
               style={primaryColor ? { backgroundColor: primaryColor } : undefined}
             >
@@ -117,8 +117,8 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
             </p>
           ) : null}
           <p
-            className={`uppercase tracking-[0.25em] text-xs mb-3 ${
-              primaryColor ? "" : "text-blush-700"
+            className={`uppercase tracking-[0.3em] text-xs font-semibold mb-3 ${
+              primaryColor ? "" : "text-sage-700"
             }`}
             style={primaryColor ? { color: primaryColor } : undefined}
           >

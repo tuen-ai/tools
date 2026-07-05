@@ -2,12 +2,12 @@
 // Keep these in sync with tailwind.config.ts.
 
 /**
- * The blush-500 token value. An event with no custom `theme.primaryColor`
- * renders the candy blush on the guest page, so the admin colour picker and
- * the printable poster must default to the *same* value — otherwise the
- * admin previews a colour their guests never see.
+ * The blush-500 token value (vintage burgundy). An event with no custom
+ * `theme.primaryColor` renders this on the guest page, so the admin colour
+ * picker and the printable poster must default to the *same* value —
+ * otherwise the admin previews a colour their guests never see.
  */
-export const DEFAULT_PRIMARY_COLOR = "#FF8FA3";
+export const DEFAULT_PRIMARY_COLOR = "#7C3030";
 
 /**
  * QR module + quiet-zone colours. Pure black on white maximises scan
