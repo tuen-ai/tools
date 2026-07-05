@@ -83,9 +83,15 @@ export function MediaGrid({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const [liveStatus, setLiveStatus] = useState<"connecting" | "live" | "offline">("connecting");
-  // null = all tables. Switching refetches page 1 with the filter applied.
+  // null = all. Table and challenge filters are mutually exclusive;
+  // switching either refetches page 1 with the filter applied.
   const [tableFilter, setTableFilter] = useState<string | null>(null);
+  const [challengeFilter, setChallengeFilter] = useState<string | null>(null);
   const [filterLoading, setFilterLoading] = useState(false);
+  // Bulk moderation: opt-in select mode + chosen ids.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPending, setBulkPending] = useState(false);
 
   const tableLabelById = new Map(tables.map((tb) => [tb.id, tb.label]));
   const challengePromptById = new Map(challenges.map((c) => [c.id, c.prompt]));
@@ -96,6 +102,8 @@ export function MediaGrid({
   rowsRef.current = rows;
   const tableFilterRef = useRef(tableFilter);
   tableFilterRef.current = tableFilter;
+  const challengeFilterRef = useRef(challengeFilter);
+  challengeFilterRef.current = challengeFilter;
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -113,10 +121,17 @@ export function MediaGrid({
         async (payload) => {
           const row = payload.new as MediaRow;
           if (rowsRef.current.some((r) => r.id === row.id)) return;
-          // Respect the active table filter — a photo from another table
-          // shouldn't pop into a filtered view.
-          const filter = tableFilterRef.current;
-          if (filter && row.table_id !== filter) return;
+          // Respect the active filter — a photo that doesn't match shouldn't
+          // pop into a filtered view.
+          if (tableFilterRef.current && row.table_id !== tableFilterRef.current) {
+            return;
+          }
+          if (
+            challengeFilterRef.current &&
+            row.challenge_id !== challengeFilterRef.current
+          ) {
+            return;
+          }
 
           // Fetch the thumb URL — bucket is private, can't sign client-side.
           let url: string | undefined;
@@ -173,12 +188,17 @@ export function MediaGrid({
   const visibleRows = rows.filter((r) => r.status !== "deleted");
   const hasMore = visibleRows.length < total;
 
-  function pageUrl(offset: number, tableId: string | null): string {
+  function pageUrl(
+    offset: number,
+    tableId: string | null,
+    challengeId: string | null,
+  ): string {
     const params = new URLSearchParams({
       offset: String(offset),
       limit: String(pageSize),
     });
     if (tableId) params.set("table", tableId);
+    if (challengeId) params.set("challenge", challengeId);
     return `/api/admin/events/${eventId}/media?${params.toString()}`;
   }
 
@@ -189,7 +209,9 @@ export function MediaGrid({
       // rows. `rows` still holds locally-deleted rows (kept so an undo is
       // possible), so page on visibleRows.length, not rows.length — else
       // each delete inflates the offset and silently skips visible photos.
-      const res = await fetch(pageUrl(visibleRows.length, tableFilter));
+      const res = await fetch(
+        pageUrl(visibleRows.length, tableFilter, challengeFilter),
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as MorePageResponse;
       setRows((prev) => [...prev, ...data.rows]);
@@ -200,12 +222,23 @@ export function MediaGrid({
     }
   }
 
-  async function applyFilter(tableId: string | null) {
-    if (tableId === tableFilter || filterLoading) return;
+  // Table and challenge filters are mutually exclusive — applying one clears
+  // the other and refetches page 1.
+  async function applyFilter(
+    tableId: string | null,
+    challengeId: string | null,
+  ) {
+    if (
+      (tableId === tableFilter && challengeId === challengeFilter) ||
+      filterLoading
+    ) {
+      return;
+    }
     setTableFilter(tableId);
+    setChallengeFilter(challengeId);
     setFilterLoading(true);
     try {
-      const res = await fetch(pageUrl(0, tableId));
+      const res = await fetch(pageUrl(0, tableId, challengeId));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as MorePageResponse;
       setRows(data.rows);
@@ -216,17 +249,78 @@ export function MediaGrid({
     }
   }
 
+  // Apply the local status change and keep `total` honest — a soft-delete
+  // must shrink the count / "Load more" target, an un-delete restore it.
+  function applyStatusLocally(id: string, status: MediaStatus) {
+    setRows((prev) => {
+      const before = prev.find((r) => r.id === id);
+      if (before && before.status !== "deleted" && status === "deleted") {
+        setTotal((tt) => Math.max(0, tt - 1));
+      } else if (before && before.status === "deleted" && status !== "deleted") {
+        setTotal((tt) => tt + 1);
+      }
+      return prev.map((r) => (r.id === id ? { ...r, status } : r));
+    });
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelect() {
+    setSelecting(false);
+    setSelected(new Set());
+  }
+
+  async function applyBulk(status: MediaStatus) {
+    if (selected.size === 0 || bulkPending) return;
+    if (
+      status === "deleted" &&
+      !window.confirm(t.bulkDeleteConfirm(selected.size))
+    ) {
+      return;
+    }
+    setBulkPending(true);
+    try {
+      // Sequential to stay well under any per-request limits; a wedding
+      // triage batch is dozens, not thousands.
+      for (const id of selected) {
+        const res = await setMediaStatusAction({ mediaId: id, status });
+        if (res.ok) applyStatusLocally(id, status);
+      }
+      exitSelect();
+    } finally {
+      setBulkPending(false);
+    }
+  }
+
   return (
     <>
-      <LiveBadge status={liveStatus} count={total} t={t} />
+      <div className="flex items-center justify-between gap-2">
+        <LiveBadge status={liveStatus} count={total} t={t} />
+        {visibleRows.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => (selecting ? exitSelect() : setSelecting(true))}
+            className="shrink-0 rounded-lg border border-cream-200 bg-white px-3 py-1.5 text-xs text-ink-700 hover:border-blush-400 transition"
+          >
+            {selecting ? t.selectCancel : t.selectMode}
+          </button>
+        ) : null}
+      </div>
 
       {tables.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2" role="group">
           <FilterChip
             label={t.filterAll}
-            active={tableFilter === null}
+            active={tableFilter === null && challengeFilter === null}
             disabled={filterLoading}
-            onClick={() => applyFilter(null)}
+            onClick={() => applyFilter(null, null)}
           />
           {tables.map((tb) => (
             <FilterChip
@@ -235,7 +329,30 @@ export function MediaGrid({
               withIcon
               active={tableFilter === tb.id}
               disabled={filterLoading}
-              onClick={() => applyFilter(tb.id)}
+              onClick={() => applyFilter(tb.id, null)}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {challenges.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2" role="group">
+          {tables.length === 0 ? (
+            <FilterChip
+              label={t.filterAll}
+              active={tableFilter === null && challengeFilter === null}
+              disabled={filterLoading}
+              onClick={() => applyFilter(null, null)}
+            />
+          ) : null}
+          {challenges.map((c) => (
+            <FilterChip
+              key={c.id}
+              label={c.prompt}
+              withSparkle
+              active={challengeFilter === c.id}
+              disabled={filterLoading}
+              onClick={() => applyFilter(null, c.id)}
             />
           ))}
         </div>
@@ -247,7 +364,7 @@ export function MediaGrid({
             <CameraIcon className="h-6 w-6" />
           </div>
           <p className="text-ink-700 text-sm">
-            {tableFilter ? t.gridEmptyFiltered : t.gridEmpty}
+            {tableFilter || challengeFilter ? t.gridEmptyFiltered : t.gridEmpty}
           </p>
         </div>
       ) : (
@@ -268,13 +385,13 @@ export function MediaGrid({
               }
               isFresh={freshIds.has(row.id)}
               isActive={activeId === row.id}
-              onOpen={() => setActiveId(row.id)}
-              onClose={() => setActiveId(null)}
-              onStatusChanged={(status) =>
-                setRows((prev) =>
-                  prev.map((r) => (r.id === row.id ? { ...r, status } : r)),
-                )
+              selecting={selecting}
+              isSelected={selected.has(row.id)}
+              onOpen={() =>
+                selecting ? toggleSelect(row.id) : setActiveId(row.id)
               }
+              onClose={() => setActiveId(null)}
+              onStatusChanged={(status) => applyStatusLocally(row.id, status)}
             />
           ))}
         </div>
@@ -292,6 +409,32 @@ export function MediaGrid({
               ? t.loadingMore
               : t.loadMore(total - visibleRows.length)}
           </button>
+        </div>
+      ) : null}
+
+      {/* Bulk action bar — floats while selecting so triaging a big wedding
+          is a couple of taps, not hundreds of modal round-trips. */}
+      {selecting && selected.size > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-ink-900 text-white px-4 py-2.5 shadow-soft">
+            <span className="text-sm">{t.bulkSelected(selected.size)}</span>
+            <button
+              type="button"
+              onClick={() => applyBulk("hidden")}
+              disabled={bulkPending}
+              className="rounded-full bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm disabled:opacity-60 transition"
+            >
+              {t.bulkHide}
+            </button>
+            <button
+              type="button"
+              onClick={() => applyBulk("deleted")}
+              disabled={bulkPending}
+              className="rounded-full bg-blush-500 hover:brightness-110 px-3 py-1.5 text-sm disabled:opacity-60 transition"
+            >
+              {t.bulkDelete}
+            </button>
+          </div>
         </div>
       ) : null}
     </>
@@ -334,12 +477,14 @@ function LiveBadge({
 function FilterChip({
   label,
   withIcon,
+  withSparkle,
   active,
   disabled,
   onClick,
 }: {
   label: string;
   withIcon?: boolean;
+  withSparkle?: boolean;
   active: boolean;
   disabled: boolean;
   onClick: () => void;
@@ -350,14 +495,16 @@ function FilterChip({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs transition disabled:opacity-60 ${
+      title={label}
+      className={`inline-flex max-w-[14rem] items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs transition disabled:opacity-60 ${
         active
           ? "bg-ink-900 text-white"
           : "border border-cream-200 bg-white text-ink-700 hover:border-blush-400"
       }`}
     >
-      {withIcon ? <TableIcon className="h-3.5 w-3.5" /> : null}
-      {label}
+      {withIcon ? <TableIcon className="h-3.5 w-3.5 shrink-0" /> : null}
+      {withSparkle ? <SparkleIcon className="h-3.5 w-3.5 shrink-0" /> : null}
+      <span className="truncate">{label}</span>
     </button>
   );
 }
@@ -370,6 +517,8 @@ function MediaTile({
   challengePrompt,
   isFresh,
   isActive,
+  selecting,
+  isSelected,
   onOpen,
   onClose,
   onStatusChanged,
@@ -381,6 +530,8 @@ function MediaTile({
   challengePrompt: string | null;
   isFresh: boolean;
   isActive: boolean;
+  selecting: boolean;
+  isSelected: boolean;
   onOpen: () => void;
   onClose: () => void;
   onStatusChanged: (status: MediaStatus) => void;
@@ -407,9 +558,16 @@ function MediaTile({
       <button
         type="button"
         onClick={onOpen}
+        aria-pressed={selecting ? isSelected : undefined}
         className={`block w-full aspect-square rounded-2xl overflow-hidden bg-cream-100 transition ${
           row.status === "hidden" ? "opacity-40" : ""
-        } ${isFresh ? "ring-2 ring-blush-500 ring-offset-2 ring-offset-cream-50" : ""}`}
+        } ${
+          isSelected
+            ? "ring-2 ring-sage-600 ring-offset-2 ring-offset-cream-50"
+            : isFresh
+              ? "ring-2 ring-blush-500 ring-offset-2 ring-offset-cream-50"
+              : ""
+        }`}
       >
         {thumb && !isVideo ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -432,6 +590,18 @@ function MediaTile({
           />
         ) : null}
       </button>
+
+      {selecting ? (
+        <span
+          className={`absolute top-2 left-2 flex h-6 w-6 items-center justify-center rounded-full border-2 pointer-events-none ${
+            isSelected
+              ? "bg-sage-600 border-sage-600 text-white"
+              : "bg-white/80 border-white"
+          }`}
+        >
+          {isSelected ? <CheckIcon className="h-4 w-4" /> : null}
+        </span>
+      ) : null}
 
       {isVideo ? (
         <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider bg-ink-900/80 text-white rounded px-1.5 py-0.5 pointer-events-none">

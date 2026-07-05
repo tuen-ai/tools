@@ -30,6 +30,17 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+/** Extension from an audio storage path (events/<id>/audio/<id>.webm). */
+function audioExt(path: string): string {
+  const m = path.match(/\.([a-z0-9]+)$/i);
+  return m ? m[1] : "webm";
+}
+
+/** RFC-4180 CSV cell: quote and escape if it contains a comma, quote, or newline. */
+function csvCell(v: string): string {
+  return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
 export async function GET(_req: Request, { params }: RouteContext) {
   const { id: eventId } = await params;
   try {
@@ -63,6 +74,14 @@ export async function GET(_req: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "no_photos" }, { status: 404 });
   }
 
+  // Guest book — text notes + voice clips. The most sentimental content;
+  // include it in the same archive so it has an off-platform home.
+  const { data: messages } = await admin
+    .from("messages")
+    .select("id, body, audio_path, created_at, guests(display_name)")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+
   // Store, not deflate — JPEG/PNG/WebP/HEIC are already compressed, so
   // running deflate over them burns CPU for ~0 size reduction.
   const archive = archiver("zip", { zlib: { level: 0 } });
@@ -93,6 +112,40 @@ export async function GET(_req: Request, { params }: RouteContext) {
           date: new Date(m.created_at),
         });
       }
+
+      // Guest book: messages.csv + voice/ clips.
+      if (messages && messages.length > 0) {
+        const rows = messages.map((msg) => {
+          const g = msg.guests as { display_name: string | null } | null;
+          return [
+            g?.display_name ?? "Guest",
+            new Date(msg.created_at).toISOString(),
+            msg.body ?? "",
+            msg.audio_path ? `voice/${msg.id}.${audioExt(msg.audio_path)}` : "",
+          ]
+            .map(csvCell)
+            .join(",");
+        });
+        const csv = ["Name,Time,Message,Voice clip", ...rows].join("\r\n");
+        // UTF-8 BOM so Excel opens Chinese message bodies correctly.
+        archive.append(Buffer.from("﻿" + csv, "utf8"), {
+          name: "messages.csv",
+        });
+
+        for (const msg of messages) {
+          if (!msg.audio_path) continue;
+          const { data: blob, error: dlErr } = await admin.storage
+            .from(STORAGE_BUCKET)
+            .download(msg.audio_path);
+          if (dlErr || !blob) continue;
+          const buf = Buffer.from(await blob.arrayBuffer());
+          archive.append(buf, {
+            name: `voice/${msg.id}.${audioExt(msg.audio_path)}`,
+            date: new Date(msg.created_at),
+          });
+        }
+      }
+
       await archive.finalize();
     } catch {
       archive.abort();
@@ -103,7 +156,7 @@ export async function GET(_req: Request, { params }: RouteContext) {
   return new Response(webStream, {
     headers: {
       "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${slug}-photos.zip"`,
+      "Content-Disposition": `attachment; filename="${slug}-album.zip"`,
       "Cache-Control": "no-store",
     },
   });

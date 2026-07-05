@@ -192,6 +192,28 @@ export function UploadClient({
     }
   }
 
+  async function deleteMyUpload(mediaId: string) {
+    if (!window.confirm(t.myUploadDeleteConfirm)) return;
+    // Optimistic: drop it from the strip immediately.
+    setMyUploads((prev) =>
+      prev
+        ? {
+            count: Math.max(0, prev.count - 1),
+            items: prev.items.filter((m) => m.id !== mediaId),
+          }
+        : prev,
+    );
+    try {
+      await fetch(`/api/media/${encodeURIComponent(mediaId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventSlug, clientFingerprint: fingerprint }),
+      });
+    } catch {
+      // Best-effort — the strip already updated; a refresh reconciles.
+    }
+  }
+
   const doneCount = items.filter((i) => i.status === "done").length;
   const failedCount = items.filter((i) => i.status === "failed").length;
   const allFinished =
@@ -346,25 +368,42 @@ export function UploadClient({
             {t.myUploadsHeading(myUploads.count)}
           </p>
           <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-            {myUploads.items.map((m) =>
-              m.kind === "image" && m.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={m.id}
-                  src={m.url}
-                  alt=""
-                  loading="lazy"
-                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                />
-              ) : (
-                <span
-                  key={m.id}
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ink-900/80 text-white"
+            {myUploads.items.map((m) => (
+              <div key={m.id} className="relative shrink-0">
+                {m.kind === "image" && m.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={m.url}
+                    alt=""
+                    loading="lazy"
+                    className="h-12 w-12 rounded-lg object-cover"
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-ink-900/80 text-white">
+                    <PlayIcon className="h-4 w-4" />
+                  </span>
+                )}
+                {/* Tap-to-retract an accidental upload. */}
+                <button
+                  type="button"
+                  onClick={() => deleteMyUpload(m.id)}
+                  aria-label={t.removeFile}
+                  className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink-900 text-white shadow"
                 >
-                  <PlayIcon className="h-4 w-4" />
-                </span>
-              ),
-            )}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.4}
+                    strokeLinecap="round"
+                    className="h-3 w-3"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}

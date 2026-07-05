@@ -28,6 +28,7 @@ export interface Dict {
   retryFailed: (n: number) => string;
   privacyNote: (perGuest: number) => string;
   myUploadsHeading: (n: number) => string;
+  myUploadDeleteConfirm: string;
   thanksTitle: string;
   thanksBody: (sent: number) => string;
   thanksFailed: (failed: number) => string;
@@ -103,6 +104,7 @@ export const DICT: Record<Lang, Dict> = {
       `Up to ${perGuest} photos per guest. Your photos are private to the couple.`,
     myUploadsHeading: (n) =>
       `You've shared ${n} photo${n === 1 ? "" : "s"} — thank you!`,
+    myUploadDeleteConfirm: "Remove this photo from the couple's gallery?",
     thanksTitle: "Thank you!",
     thanksBody: (sent) =>
       `${sent} photo${sent === 1 ? "" : "s"} sent to the couple.`,
@@ -167,6 +169,7 @@ export const DICT: Record<Lang, Dict> = {
     privacyNote: (perGuest) =>
       `每位賓客最多 ${perGuest} 張。您的相片只有新人會看到。`,
     myUploadsHeading: (n) => `您已分享 ${n} 張相片 — 多謝您!`,
+    myUploadDeleteConfirm: "要從新人相簿移除呢張相?",
     thanksTitle: "謝謝您!",
     thanksBody: (sent) => `已成功傳送 ${sent} 張相片給新人。`,
     thanksFailed: (failed) => ` 還有 ${failed} 張未能傳送,請再試一次。`,
