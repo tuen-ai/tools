@@ -16,6 +16,7 @@ export interface Dict {
   yourNamePlaceholder: string;
   messageLabel: string;
   messagePlaceholder: string;
+  challengesLabel: string;
   choosePhotos: string;
   chooseHelp: (max: number) => string;
   changePhotos: string;
@@ -23,6 +24,7 @@ export interface Dict {
   send: (count: number) => string;
   sending: (done: number, total: number) => string;
   privacyNote: (perGuest: number) => string;
+  myUploadsHeading: (n: number) => string;
   thanksTitle: string;
   thanksBody: (sent: number) => string;
   thanksFailed: (failed: number) => string;
@@ -34,6 +36,7 @@ export interface Dict {
   slideshowEyebrow: string;
   slideshowWaiting: string;
   slideshowCounter: (current: number, total: number) => string;
+  wallPhotoCount: (n: number) => string;
   slideshowNewToast: (n: number) => string;
   msgModeText: string;
   msgModeVoice: string;
@@ -64,6 +67,7 @@ export const DICT: Record<Lang, Dict> = {
     yourNamePlaceholder: "e.g. Aunt Linda",
     messageLabel: "Leave a message",
     messagePlaceholder: "A short note for the couple…",
+    challengesLabel: "Photo challenge",
     choosePhotos: "Choose photos or short videos",
     chooseHelp: (max) =>
       `Photos or videos (under 30s) · up to ${max} at a time`,
@@ -74,6 +78,8 @@ export const DICT: Record<Lang, Dict> = {
     sending: (done, total) => `Sending… ${done}/${total}`,
     privacyNote: (perGuest) =>
       `Up to ${perGuest} photos per guest. Your photos are private to the couple.`,
+    myUploadsHeading: (n) =>
+      `You've shared ${n} photo${n === 1 ? "" : "s"} — thank you!`,
     thanksTitle: "Thank you!",
     thanksBody: (sent) =>
       `${sent} photo${sent === 1 ? "" : "s"} sent to the couple.`,
@@ -88,6 +94,7 @@ export const DICT: Record<Lang, Dict> = {
     slideshowEyebrow: "Wedding photo sharing",
     slideshowWaiting: "Waiting for the first photo from your guests…",
     slideshowCounter: (current, total) => `${current} / ${total}`,
+    wallPhotoCount: (n) => `${n} photo${n === 1 ? "" : "s"}`,
     slideshowNewToast: (n) =>
       `${n} new photo${n === 1 ? "" : "s"}`,
     msgModeText: "Text",
@@ -119,6 +126,7 @@ export const DICT: Record<Lang, Dict> = {
     yourNamePlaceholder: "例如:阿姨",
     messageLabel: "留言給新人",
     messagePlaceholder: "寫幾句祝福的話…",
+    challengesLabel: "相片任務",
     choosePhotos: "選擇相片或短片",
     chooseHelp: (max) =>
       `相片或短片(30 秒以內) · 每次最多 ${max} 個`,
@@ -128,6 +136,7 @@ export const DICT: Record<Lang, Dict> = {
     sending: (done, total) => `傳送中… ${done}/${total}`,
     privacyNote: (perGuest) =>
       `每位賓客最多 ${perGuest} 張。您的相片只有新人會看到。`,
+    myUploadsHeading: (n) => `您已分享 ${n} 張相片 — 多謝您!`,
     thanksTitle: "謝謝您!",
     thanksBody: (sent) => `已成功傳送 ${sent} 張相片給新人。`,
     thanksFailed: (failed) => ` 還有 ${failed} 張未能傳送,請再試一次。`,
@@ -140,6 +149,7 @@ export const DICT: Record<Lang, Dict> = {
     slideshowEyebrow: "婚禮相片分享",
     slideshowWaiting: "等待第一張賓客相片…",
     slideshowCounter: (current, total) => `${current} / ${total}`,
+    wallPhotoCount: (n) => `${n} 張相片`,
     slideshowNewToast: (n) => `${n} 張新相片`,
     msgModeText: "文字",
     msgModeVoice: "語音",

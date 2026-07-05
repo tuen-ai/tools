@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ALLOWED_MIME_TYPES,
@@ -24,6 +24,7 @@ import {
   HeartFilledIcon,
   CheckIcon,
   TrashIcon,
+  StarFilledIcon,
 } from "@/components/ui/icons";
 
 const FP_KEY = "wgp.fingerprint";
@@ -48,6 +49,8 @@ interface Props {
   maxPerGuest: number;
   primaryColor: string | null;
   tableLabel: string | null;
+  /** Photo-challenge prompts the couple set up; empty = feature hidden. */
+  challenges: { id: string; prompt: string }[];
 }
 
 function videoDurationOk(file: File): Promise<boolean> {
@@ -74,6 +77,7 @@ export function UploadClient({
   maxPerGuest,
   primaryColor,
   tableLabel,
+  challenges,
 }: Props) {
   const t = DICT[lang];
   const primaryButtonClass = primaryColor
@@ -86,6 +90,8 @@ export function UploadClient({
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [messageMode, setMessageMode] = useState<"text" | "voice">("text");
+  // Selected photo-challenge (applies to the whole batch; tap to toggle).
+  const [challengeId, setChallengeId] = useState<string | null>(null);
   const [voiceClips, setVoiceClips] = useState<VoiceClip[]>([]);
   const [deletingClipId, setDeletingClipId] = useState<string | null>(null);
   // Mirror voiceClips into a ref so the unmount cleanup can revoke the
@@ -98,6 +104,11 @@ export function UploadClient({
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
+  // The guest's previously-sent uploads ("did it work?" reassurance strip).
+  const [myUploads, setMyUploads] = useState<{
+    count: number;
+    items: { id: string; kind: "image" | "video"; url: string | null }[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // The "更換相片" label replaces the current selection; the "+ 新增相片"
   // tile appends to it. Both point at the same file input, so we stash the
@@ -108,6 +119,32 @@ export function UploadClient({
     setFingerprint(readOrMintFingerprint());
     setName(window.localStorage.getItem(NAME_KEY) ?? "");
   }, []);
+
+  const refreshMyUploads = useCallback(
+    async (fp: string) => {
+      if (!fp) return;
+      try {
+        const res = await fetch("/api/media/mine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventSlug, clientFingerprint: fp }),
+        });
+        if (!res.ok) return; // reassurance strip is best-effort only
+        setMyUploads(
+          (await res.json()) as NonNullable<typeof myUploads>,
+        );
+      } catch {
+        // Network blip — the strip just doesn't show.
+      }
+    },
+    [eventSlug],
+  );
+
+  // Returning guests see their earlier uploads as soon as the
+  // fingerprint hydrates.
+  useEffect(() => {
+    if (fingerprint) void refreshMyUploads(fingerprint);
+  }, [fingerprint, refreshMyUploads]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -223,12 +260,15 @@ export function UploadClient({
         displayName: name || null,
         message: message || null,
         tableLabel: tableLabel ?? null,
+        challengeId,
         items,
         onItemChange: patchItem,
       });
       // Clear the message after a successful send so a second batch
       // doesn't accidentally re-post it.
       setMessage("");
+      // Refresh the reassurance strip so the new photos show up in it.
+      void refreshMyUploads(fingerprint);
     } catch (err) {
       setBatchError((err as Error).message);
     } finally {
@@ -256,6 +296,35 @@ export function UploadClient({
 
   return (
     <div className="bg-white rounded-3xl shadow-soft p-6 sm:p-8 space-y-5">
+      {myUploads && myUploads.count > 0 ? (
+        <div className="rounded-xl bg-sage-500/10 p-3">
+          <p className="text-[11px] font-medium text-sage-700 mb-2">
+            {t.myUploadsHeading(myUploads.count)}
+          </p>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {myUploads.items.map((m) =>
+              m.kind === "image" && m.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={m.id}
+                  src={m.url}
+                  alt=""
+                  loading="lazy"
+                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <span
+                  key={m.id}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ink-900/80 text-white"
+                >
+                  <PlayIcon className="h-4 w-4" />
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">
           {t.yourName}{" "}
@@ -370,10 +439,51 @@ export function UploadClient({
         )}
       </div>
 
+      {challenges.length > 0 ? (
+        <div>
+          <span className="text-sm text-ink-700 font-medium">
+            {t.challengesLabel}{" "}
+            <span className="text-ink-700 font-normal">{t.optional}</span>
+          </span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {challenges.map((c) => {
+              const active = challengeId === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={isUploading}
+                  aria-pressed={active}
+                  onClick={() =>
+                    setChallengeId((cur) => (cur === c.id ? null : c.id))
+                  }
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition ${
+                    active
+                      ? "border-blush-400 bg-blush-500/15 text-blush-700 font-medium"
+                      : "border-cream-200 bg-cream-50 text-ink-700 hover:border-blush-400"
+                  }`}
+                >
+                  <StarFilledIcon
+                    className={`h-3 w-3 ${active ? "" : "opacity-40"}`}
+                  />
+                  {c.prompt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm"
+        // Deliberately NOT advertising image/heic|heif here: when HEIC is
+        // absent from `accept`, iOS Safari transcodes HEIC → high-quality
+        // JPEG on selection (print quality preserved), which sidesteps raw
+        // HEIC upload/thumbnailing bugs. Worse, Safari 17+ converts even
+        // PNGs *to* HEIC when image/heic is listed. The server allowlist
+        // still accepts HEIC as a fallback for Android file managers.
+        accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
         multiple
         capture="environment"
         onChange={handleFileSelect}

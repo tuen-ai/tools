@@ -6,6 +6,7 @@ import { getEventById, getEventStats } from "@/lib/db/events";
 import { listMediaPage, signThumbnailUrls } from "@/lib/db/media";
 import { listMessagesPage } from "@/lib/db/messages";
 import { listTables } from "@/lib/db/tables";
+import { listChallenges } from "@/lib/db/challenges";
 import { resolveLangServer } from "@/lib/i18n/server";
 import { ADMIN_DICT } from "@/lib/i18n/admin-dict";
 import {
@@ -32,14 +33,16 @@ export default async function EventDashboardPage({ params }: Props) {
   await requireEventAdmin(eventId);
 
   const admin = createAdminClient();
-  const [event, page, messages, tables, stats, lang] = await Promise.all([
-    getEventById(admin, eventId),
-    listMediaPage(admin, { eventId, offset: 0, limit: PAGE_SIZE }),
-    listMessagesPage(admin, { eventId, offset: 0, limit: MESSAGE_LIMIT }),
-    listTables(admin, eventId),
-    getEventStats(admin, eventId),
-    resolveLangServer(),
-  ]);
+  const [event, page, messages, tables, challenges, stats, lang] =
+    await Promise.all([
+      getEventById(admin, eventId),
+      listMediaPage(admin, { eventId, offset: 0, limit: PAGE_SIZE }),
+      listMessagesPage(admin, { eventId, offset: 0, limit: MESSAGE_LIMIT }),
+      listTables(admin, eventId),
+      listChallenges(admin, eventId),
+      getEventStats(admin, eventId),
+      resolveLangServer(),
+    ]);
   const t = ADMIN_DICT[lang];
 
   if (!event) {
@@ -83,6 +86,14 @@ export default async function EventDashboardPage({ params }: Props) {
             <PlayIcon className="h-4 w-4" />
             {t.navSlideshow}
           </Link>
+          <Link
+            href={`/e/${event.slug}/show?layout=wall`}
+            target="_blank"
+            className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
+            title={t.navWallTitle}
+          >
+            {t.navWall}
+          </Link>
           <a
             href={`/api/admin/events/${eventId}/export`}
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
@@ -107,6 +118,12 @@ export default async function EventDashboardPage({ params }: Props) {
             className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
           >
             {t.navTables}
+          </Link>
+          <Link
+            href={`/admin/${eventId}/challenges`}
+            className="rounded-lg border border-cream-200 bg-white px-3 py-2 hover:border-blush-400 transition"
+          >
+            {t.navChallenges}
           </Link>
           <Link
             href={`/admin/${eventId}/settings`}
@@ -151,6 +168,7 @@ export default async function EventDashboardPage({ params }: Props) {
         total={page.total}
         pageSize={PAGE_SIZE}
         tables={tables.map((tb) => ({ id: tb.id, label: tb.label }))}
+        challenges={challenges.map((c) => ({ id: c.id, prompt: c.prompt }))}
       />
     </div>
   );

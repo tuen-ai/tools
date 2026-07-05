@@ -55,7 +55,7 @@ export function CoverPanel({ lang, eventId, coverUrl }: Props) {
         <input
           type="file"
           name="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+          accept="image/jpeg,image/png,image/webp"
           onChange={(e) => {
             if (e.target.files?.length) formRef.current?.requestSubmit();
           }}

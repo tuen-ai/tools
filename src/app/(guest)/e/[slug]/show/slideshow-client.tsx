@@ -21,6 +21,10 @@ interface Props {
   eventSlug: string;
   coupleNames: string;
   initialSlides: Slide[];
+  /** "slideshow" = one photo at a time with Ken Burns; "wall" = live
+   *  masonry grid that surfaces many new arrivals at once. The wall is
+   *  the stronger in-room upload nudge during reception surges. */
+  mode?: "slideshow" | "wall";
 }
 
 const SLIDE_MS = 6000;          // hold time per image
@@ -28,17 +32,22 @@ const VIDEO_MAX_MS = 32000;     // safety cap for video slides
 const POLL_INTERVAL_MS = 8000;  // how often we ask for new slides
 const NEW_TOAST_MS = 4500;      // "New from a guest" banner duration
 const IDLE_CURSOR_MS = 3000;    // hide cursor after this idle time
+const WALL_MAX_TILES = 80;      // cap DOM size on long receptions
+const WALL_FRESH_MS = 6000;     // highlight window for new wall tiles
 
 export function SlideshowClient({
   lang,
   eventSlug,
   coupleNames,
   initialSlides,
+  mode = "slideshow",
 }: Props) {
   const t = DICT[lang];
   const [slides, setSlides] = useState<Slide[]>(initialSlides);
   const [index, setIndex] = useState(0);
   const [newCount, setNewCount] = useState(0);
+  // Wall mode: ids highlighted as "just arrived" for a few seconds.
+  const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(new Set());
   const [cursorVisible, setCursorVisible] = useState(true);
   const idleTimerRef = useRef<number | null>(null);
   const newCountClearRef = useRef<number | null>(null);
@@ -69,6 +78,16 @@ export function SlideshowClient({
         if (fresh.length === 0) return;
         setSlides((prev) => [...prev, ...fresh]);
         setNewCount((n) => n + fresh.length);
+        // Highlight the new tiles on the wall, then let them settle.
+        const freshSet = new Set(fresh.map((s) => s.id));
+        setFreshIds((prev) => new Set([...prev, ...freshSet]));
+        window.setTimeout(() => {
+          setFreshIds((prev) => {
+            const next = new Set(prev);
+            freshSet.forEach((id) => next.delete(id));
+            return next;
+          });
+        }, WALL_FRESH_MS);
         if (newCountClearRef.current) window.clearTimeout(newCountClearRef.current);
         newCountClearRef.current = window.setTimeout(
           () => setNewCount(0),
@@ -97,6 +116,7 @@ export function SlideshowClient({
   }, []);
 
   useEffect(() => {
+    if (mode === "wall") return; // the wall doesn't advance
     if (slides.length === 0) return;
     const current = slides[index % slides.length];
     if (!current) return;
@@ -107,7 +127,7 @@ export function SlideshowClient({
     // Video: hard cap so a broken stream can't stall the slideshow.
     const t = window.setTimeout(advance, VIDEO_MAX_MS);
     return () => window.clearTimeout(t);
-  }, [index, slides, advance]);
+  }, [index, slides, advance, mode]);
 
   // Hide cursor when idle (projector mode).
   useEffect(() => {
@@ -144,6 +164,69 @@ export function SlideshowClient({
             {t.slideshowWaiting}
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (mode === "wall") {
+    // Newest first; cap the DOM so an all-night reception stays smooth.
+    const tiles = slides.slice(-WALL_MAX_TILES).reverse();
+    return (
+      <div
+        className={`fixed inset-0 bg-ink-900 overflow-hidden ${
+          cursorVisible ? "" : "cursor-none"
+        }`}
+      >
+        <div className="absolute inset-0 overflow-hidden px-4 pt-20 pb-4">
+          <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-3">
+            {tiles.map((s) => (
+              <div
+                key={s.id}
+                className={`mb-3 break-inside-avoid overflow-hidden rounded-2xl ${
+                  freshIds.has(s.id)
+                    ? "ring-4 ring-blush-500 animate-[pop_500ms_cubic-bezier(0.2,0.8,0.4,1)_both]"
+                    : "animate-[fadein_600ms_ease-out_both]"
+                }`}
+              >
+                {s.kind === "video" ? (
+                  <video
+                    src={s.url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="w-full"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.url} alt="" className="w-full" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Header overlay — same identity block as the slideshow. */}
+        <div className="absolute top-0 left-0 right-0 px-8 py-4 flex items-center justify-between text-white/90 z-10 pointer-events-none bg-gradient-to-b from-ink-900/90 to-transparent">
+          <div>
+            <p className="uppercase tracking-[0.3em] text-[10px] text-blush-400 mb-0.5">
+              {t.slideshowEyebrow}
+            </p>
+            <h1 className="font-serif text-2xl drop-shadow-lg">{coupleNames}</h1>
+          </div>
+          <div className="text-right text-xs text-white/60">
+            <span>{t.wallPhotoCount(slides.length)}</span>
+          </div>
+        </div>
+
+        {newCount > 0 ? (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 animate-[slidedown_500ms_ease-out]">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-blush-500/90 text-white px-5 py-2 text-sm font-medium shadow-soft backdrop-blur">
+              <SparkleIcon className="h-4 w-4" />
+              {t.slideshowNewToast(newCount)}
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }

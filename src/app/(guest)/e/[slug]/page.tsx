@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEventBySlug } from "@/lib/db/events";
+import { listChallenges } from "@/lib/db/challenges";
 import { signOriginalUrl } from "@/lib/db/media";
 import { DICT } from "@/lib/i18n";
 import { resolveLangServer } from "@/lib/i18n/server";
@@ -64,6 +65,18 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
   const t = DICT[lang];
   const primaryColor = readPrimaryColor(event.theme);
   const tableLabel = sp.table?.trim() || null;
+
+  // Photo challenges (optional prompts the couple set up). Failure is
+  // non-fatal — the upload card renders without the chips.
+  let challenges: { id: string; prompt: string }[] = [];
+  try {
+    challenges = (await listChallenges(admin, event.id)).map((c) => ({
+      id: c.id,
+      prompt: c.prompt,
+    }));
+  } catch {
+    // migrations not applied yet, or transient error — skip the chips
+  }
 
   // Sign a short-lived URL for the cover image (bucket is private).
   // Use a 30-minute TTL — the guest page is cached for 60s anyway, so
@@ -128,6 +141,7 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
             maxPerGuest={event.max_uploads_per_guest}
             primaryColor={primaryColor}
             tableLabel={tableLabel}
+            challenges={challenges}
           />
         ) : (
           <ClosedScreen lang={lang} />

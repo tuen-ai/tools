@@ -36,6 +36,7 @@ const BodySchema = z.object({
   displayName: z.string().trim().min(1).max(64).optional().nullable(),
   message: z.string().trim().min(1).max(500).optional().nullable(),
   tableLabel: z.string().trim().min(1).max(64).optional().nullable(),
+  challengeId: z.string().uuid().optional().nullable(),
   files: z.array(FileSchema).min(1).max(MAX_FILES_PER_REQUEST),
 });
 
@@ -96,6 +97,20 @@ export async function POST(request: Request) {
     tableId = tbl?.[0]?.id ?? null;
   }
 
+  // Resolve optional challenge — must belong to this event. Stale or
+  // foreign ids are ignored rather than erroring, same posture as tables:
+  // a guest on an outdated page shouldn't lose their photos.
+  let challengeId: string | null = null;
+  if (parsed.challengeId) {
+    const { data: ch } = await admin
+      .from("challenges")
+      .select("id")
+      .eq("id", parsed.challengeId)
+      .eq("event_id", event.id)
+      .maybeSingle();
+    challengeId = ch?.id ?? null;
+  }
+
   // Optional message — insert before quota check so even if the guest is
   // at their photo limit the couple still receives their note.
   if (parsed.message) {
@@ -149,6 +164,7 @@ export async function POST(request: Request) {
     eventId: event.id,
     guestId: guest.id,
     tableId,
+    challengeId,
     items,
   });
 }

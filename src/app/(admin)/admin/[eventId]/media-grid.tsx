@@ -10,6 +10,7 @@ import {
   CameraIcon,
   PlayIcon,
   TableIcon,
+  SparkleIcon,
   DownloadIcon,
   EyeOffIcon,
   CheckIcon,
@@ -24,6 +25,11 @@ export interface TableOption {
   label: string;
 }
 
+export interface ChallengeOption {
+  id: string;
+  prompt: string;
+}
+
 interface Props {
   lang: Lang;
   eventId: string;
@@ -32,6 +38,7 @@ interface Props {
   total: number;
   pageSize: number;
   tables: TableOption[];
+  challenges: ChallengeOption[];
 }
 
 interface MorePageResponse {
@@ -50,6 +57,7 @@ export function MediaGrid({
   total: initialTotal,
   pageSize,
   tables,
+  challenges,
 }: Props) {
   const t = ADMIN_DICT[lang];
   const [rows, setRows] = useState<MediaRow[]>(initialRows);
@@ -64,6 +72,7 @@ export function MediaGrid({
   const [filterLoading, setFilterLoading] = useState(false);
 
   const tableLabelById = new Map(tables.map((tb) => [tb.id, tb.label]));
+  const challengePromptById = new Map(challenges.map((c) => [c.id, c.prompt]));
 
   // Refs let the realtime callbacks read current state without re-subscribing
   // every render.
@@ -236,6 +245,11 @@ export function MediaGrid({
               tableLabel={
                 row.table_id ? (tableLabelById.get(row.table_id) ?? null) : null
               }
+              challengePrompt={
+                row.challenge_id
+                  ? (challengePromptById.get(row.challenge_id) ?? null)
+                  : null
+              }
               isFresh={freshIds.has(row.id)}
               isActive={activeId === row.id}
               onOpen={() => setActiveId(row.id)}
@@ -337,6 +351,7 @@ function MediaTile({
   row,
   thumb,
   tableLabel,
+  challengePrompt,
   isFresh,
   isActive,
   onOpen,
@@ -347,6 +362,7 @@ function MediaTile({
   row: MediaRow;
   thumb: string | undefined;
   tableLabel: string | null;
+  challengePrompt: string | null;
   isFresh: boolean;
   isActive: boolean;
   onOpen: () => void;
@@ -409,6 +425,18 @@ function MediaTile({
         <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 text-[10px] bg-white/85 text-ink-700 rounded px-1.5 py-0.5 pointer-events-none backdrop-blur-sm">
           <TableIcon className="h-3 w-3" />
           {tableLabel}
+        </span>
+      ) : null}
+      {challengePrompt ? (
+        // Sits above the video badge (bottom-8) when both are present.
+        <span
+          className={`absolute ${
+            isVideo ? "bottom-8" : "bottom-2"
+          } left-2 inline-flex max-w-[85%] items-center gap-1 text-[10px] bg-blush-500/90 text-white rounded px-1.5 py-0.5 pointer-events-none`}
+          title={challengePrompt}
+        >
+          <SparkleIcon className="h-3 w-3 shrink-0" />
+          <span className="truncate">{challengePrompt}</span>
         </span>
       ) : null}
       {row.status === "hidden" ? (

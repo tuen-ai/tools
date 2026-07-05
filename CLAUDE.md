@@ -22,8 +22,15 @@ couple sees them in a private admin gallery.
       ZIP album export
 - [x] Phase 7: live slideshow (`/e/[slug]/show`), video upload (30s cap),
       cover image, animations + confetti
-- [x] Phase 8 (in progress): per-table QR codes (`/e/[slug]?table=X`),
+- [x] Phase 8: per-table QR codes (`/e/[slug]?table=X`),
       tables admin (`/admin/[eventId]/tables`)
+- [x] Phase 9 (adoption levers, from 2025-26 market research): photo
+      challenges (`challenges` table + `media.challenge_id`, admin CRUD at
+      `/admin/[eventId]/challenges`, guest chips), live photo wall
+      (`/e/[slug]/show?layout=wall` masonry mode), guest "my uploads"
+      reassurance strip (`POST /api/media/mine`), thank-you-card QR insert
+      (`/admin/[eventId]/qr?variant=thankyou`, 4-up A4), HEIC accept-attr
+      fix (iOS transcodes to JPEG when HEIC absent from `accept`)
 
 ## Running locally
 
@@ -103,16 +110,21 @@ the database.
 
 ## Database
 
-Four tables, all in `public`:
+Seven tables, all in `public`:
 
 | Table | Purpose |
 |-------|---------|
 | `events` | One row per wedding; slug, welcome text, theme, upload kill-switch |
 | `guests` | One row per (event, fingerprint); optional display name |
-| `media`  | One row per uploaded photo; `status` enum for moderation |
+| `media`  | One row per uploaded photo/video; `status` enum for moderation; optional `table_id` / `challenge_id` tags |
 | `admin_event_access` | M:N between `auth.users` and `events`; roles: owner/editor |
+| `messages` | Guest notes (text and/or `audio_path` voice clips) |
+| `tables` | Per-table QR labels (0006) |
+| `challenges` | Photo-challenge prompts (0008) |
 
-Schema is in `supabase/migrations/0001_init.sql`. RLS is on for all four.
+Base schema is in `supabase/migrations/0001_init.sql`; later tables in
+0005–0008. `supabase/bundle/all_migrations.sql` concatenates everything for
+a one-shot SQL-editor paste. RLS is on for all tables.
 
 ### Regenerating TypeScript types
 
@@ -329,11 +341,22 @@ stream-direct-from-storage approach or a one-off batch script.
 
 ## Things deliberately deferred
 
-- Video support (photos only for MVP — schema leaves room via `mime_type`)
-- Per-table QR tagging (`guests` could grow a `table_id` later)
-- Client-side compression (couples want originals for prints)
+(Video, per-table QR, i18n, and the hard-delete cron all shipped in later
+phases — this list is only what's STILL deferred.)
+
+- Client-side compression of the primary photo path (couples want originals
+  for prints; "originals, always" is a market differentiator — 2025-26
+  research found competitors get penalized for compressing). An optional
+  "low data mode" toggle is acceptable future work.
 - EXIF stripping on storage (keep originals for the couple; serve stripped
   variants via image transform if/when media leaves the admin surface)
-- i18n
-- Multi-event SaaS billing / tenant isolation
-- Hard-delete cron for soft-deleted media
+- Multi-event SaaS billing / tenant isolation (market pricing axes, if ever:
+  guest-count cap + upload/hosting window)
+- Disposable-camera mode (per-guest shot cap + delayed reveal — strongest
+  paid feature in the category; pairs with existing `max_uploads_per_guest`)
+- AI face recognition "find my photos" (biggest 2025-26 differentiator, but
+  needs a face-embedding service + privacy design)
+- Admin triage aids: client-computed dHash + blur score at upload, admin
+  grid groups near-dupes / sorts blurriest first
+- Offline upload queue (IndexedDB + foreground retry; Background Sync API
+  has NO iOS support — don't build on it)

@@ -11,7 +11,7 @@ import { SlideshowClient, type Slide } from "./slideshow-client";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ lang?: string }>;
+  searchParams: Promise<{ lang?: string; layout?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -89,6 +89,7 @@ export default async function SlideshowPage({ params, searchParams }: Props) {
       eventSlug={event.slug}
       coupleNames={event.couple_names}
       initialSlides={initialSlides}
+      mode={sp.layout === "wall" ? "wall" : "slideshow"}
     />
   );
 }

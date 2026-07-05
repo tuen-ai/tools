@@ -63,6 +63,7 @@ export type Database = {
           event_id: string;
           guest_id: string | null;
           table_id: string | null;
+          challenge_id: string | null;
           storage_path: string;
           mime_type: string;
           size_bytes: number;
@@ -78,6 +79,7 @@ export type Database = {
           event_id: string;
           guest_id?: string | null;
           table_id?: string | null;
+          challenge_id?: string | null;
           storage_path: string;
           mime_type: string;
           size_bytes: number;
@@ -102,6 +104,21 @@ export type Database = {
           label: string;
         };
         Update: Partial<Database["public"]["Tables"]["tables"]["Insert"]>;
+        Relationships: [];
+      };
+      challenges: {
+        Row: {
+          id: string;
+          event_id: string;
+          prompt: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          prompt: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["challenges"]["Insert"]>;
         Relationships: [];
       };
       messages: {

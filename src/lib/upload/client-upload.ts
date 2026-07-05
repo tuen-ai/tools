@@ -15,6 +15,7 @@ interface SignResponse {
   eventId: string;
   guestId: string;
   tableId: string | null;
+  challengeId: string | null;
   items: Array<{
     mediaId: string;
     storagePath: string;
@@ -129,6 +130,8 @@ interface UploadOptions {
   displayName: string | null;
   message: string | null;
   tableLabel: string | null;
+  /** Optional photo-challenge the batch answers. */
+  challengeId: string | null;
   items: UploadItem[];
   onItemChange: (id: string, patch: Partial<UploadItem>) => void;
   concurrency?: number;
@@ -141,6 +144,7 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
     displayName,
     message,
     tableLabel,
+    challengeId,
     items,
     onItemChange,
   } = opts;
@@ -159,6 +163,7 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
           displayName: displayName?.trim() || null,
           message: message?.trim() || null,
           tableLabel: tableLabel?.trim() || null,
+          challengeId: challengeId ?? null,
           files: items.map((it) => ({
             mime: it.file.type as AllowedMime,
             size: it.file.size,
@@ -222,6 +227,7 @@ export async function uploadGuestPhotos(opts: UploadOptions): Promise<void> {
                 eventId: sign.eventId,
                 guestId: sign.guestId,
                 tableId: sign.tableId,
+                challengeId: sign.challengeId,
                 storagePath: slot.storagePath,
                 mime: item.file.type,
                 size: item.file.size,
