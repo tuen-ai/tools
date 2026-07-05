@@ -87,9 +87,9 @@ export default async function TablesPage({ params }: Props) {
           <p className="text-ink-500 text-sm">{t.tablesEmpty}</p>
         </div>
       ) : (
-        {/* Print: 2×N cut-out table cards per A4 — dashed borders double as
-            cut lines; each card is self-contained (couple names + scan
-            instruction) so it works standing alone on the table. */}
+        // Print: 2×N cut-out table cards per A4 — dashed borders double as
+        // cut lines; each card is self-contained (couple names + scan
+        // instruction) so it works standing alone on the table.
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 print:mt-0 print:grid-cols-2 print:gap-0">
           {qrs.map(({ table, url, svg }) => (
             <div
