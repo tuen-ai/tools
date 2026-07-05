@@ -45,7 +45,14 @@ export async function GET() {
 
   const ok = db && storage;
   return NextResponse.json(
-    { ok, db, storage, time: new Date().toISOString() },
+    {
+      ok,
+      db,
+      storage,
+      // Which build is live — first 7 chars of the deployed commit.
+      rev: (process.env.VERCEL_GIT_COMMIT_SHA ?? "dev").slice(0, 7),
+      time: new Date().toISOString(),
+    },
     {
       status: ok ? 200 : 503,
       headers: { "Cache-Control": "no-store" },

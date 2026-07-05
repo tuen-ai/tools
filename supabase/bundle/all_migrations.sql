@@ -1,5 +1,5 @@
 -- ============================================================
--- Wedding Photo Platform — bundled migrations 0001 → 0008
+-- Wedding Photo Platform — bundled migrations 0001 → 0009
 -- Paste this whole file into Supabase SQL Editor → Run.
 -- Generated: 2026-07-05 UTC
 -- ============================================================
@@ -577,3 +577,23 @@ with check (
 
 -- Guest pages render server-side with the service-role client, so anon
 -- needs no direct SELECT here (same posture as tables).
+
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- 0009_whoami.sql
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+-- Diagnostic helper: lets the app ask the database "who do YOU think is
+-- calling?" — auth.uid() as seen by PostgREST/RLS. Used by /api/whoami to
+-- debug identity-propagation issues (auth API says logged-in, but RLS
+-- rejects as anon). Returns only the caller's own uid; safe to expose.
+
+create or replace function public.whoami()
+returns uuid
+language sql
+stable
+as $$
+  select auth.uid();
+$$;
+
+revoke all on function public.whoami() from public;
+grant execute on function public.whoami() to anon, authenticated;
