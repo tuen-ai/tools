@@ -86,6 +86,12 @@ export interface SignedThumb {
   url: string;
 }
 
+// Admin gallery / dashboard stay open for hours during a reception, so
+// their thumbnail URLs must outlive the default 5-min TTL or tiles below
+// the fold (and re-opened modals) render broken. Admin-only URLs, safe to
+// be long-lived; the <img onError> refetch is the backstop.
+export const ADMIN_THUMB_TTL_SEC = 6 * 60 * 60; // 6 hours
+
 /**
  * Batch-mint signed URLs for a page of media. For images, applies a
  * Supabase image transform (resize + quality). For videos, returns the

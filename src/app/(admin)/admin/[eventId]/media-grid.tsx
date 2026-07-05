@@ -20,6 +20,22 @@ import { setMediaStatusAction } from "./actions";
 
 type MediaRow = Database["public"]["Tables"]["media"]["Row"];
 
+// Backstop for an expired/failed thumbnail signed URL: fetch a fresh one
+// once (guarded against loops) and swap it in imperatively.
+function refetchThumb(
+  el: HTMLImageElement | HTMLVideoElement,
+  mediaId: string,
+) {
+  if (el.dataset.retried) return;
+  el.dataset.retried = "1";
+  fetch(`/api/admin/media/${mediaId}/thumb`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d: { url?: string } | null) => {
+      if (d?.url) el.src = d.url;
+    })
+    .catch(() => {});
+}
+
 export interface TableOption {
   id: string;
   label: string;
@@ -401,12 +417,14 @@ function MediaTile({
             src={thumb}
             alt=""
             loading="lazy"
+            onError={(e) => refetchThumb(e.currentTarget, row.id)}
             className="w-full h-full object-cover"
           />
         ) : null}
         {thumb && isVideo ? (
           <video
             src={thumb}
+            onError={(e) => refetchThumb(e.currentTarget, row.id)}
             muted
             playsInline
             preload="metadata"

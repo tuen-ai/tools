@@ -484,7 +484,10 @@ export function UploadClient({
         // still accepts HEIC as a fallback for Android file managers.
         accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
         multiple
-        capture="environment"
+        // NO `capture` attribute: on Android Chrome it forces the camera and
+        // hides the photo library, so guests can't upload the photos they
+        // already took — the app's core flow. The OS picker offers "Take
+        // photo" on its own anyway.
         onChange={handleFileSelect}
         disabled={isUploading}
         className="hidden"

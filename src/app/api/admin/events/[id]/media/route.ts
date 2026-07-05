@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { assertEventAdmin, AuthorizationError } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { listMediaPage, signThumbnailUrls } from "@/lib/db/media";
+import {
+  listMediaPage,
+  signThumbnailUrls,
+  ADMIN_THUMB_TTL_SEC,
+} from "@/lib/db/media";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +50,9 @@ export async function GET(request: Request, { params }: RouteContext) {
     limit: parsed.data.limit,
     tableId: parsed.data.table,
   });
-  const thumbs = await signThumbnailUrls(admin, page.rows);
+  const thumbs = await signThumbnailUrls(admin, page.rows, {
+    expiresInSec: ADMIN_THUMB_TTL_SEC,
+  });
 
   return NextResponse.json({
     rows: page.rows,
