@@ -323,7 +323,7 @@ function SlideLayer({ slide, entering }: { slide: Slide; entering: boolean }) {
         autoPlay
         muted
         playsInline
-        className={`absolute inset-0 w-full h-full object-contain bg-black ${fade}`}
+        className={`absolute inset-0 w-full h-full object-contain bg-ink-900 ${fade}`}
       />
     );
   }

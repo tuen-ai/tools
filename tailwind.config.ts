@@ -15,6 +15,7 @@ const config: Config = {
         // All text-on-light tokens verified ≥4.5:1 (AA) on their intended
         // backgrounds; white passes on blush-500 (9.0:1) and sage-600 (5.8:1).
         cream: {
+          25:  "#FBF6EA", // card surface (lighter than the page, warm)
           50:  "#F5EDDE", // page background (aged paper)
           100: "#EFE4CD", // tinted inset (toggle track, pills)
           200: "#DECBA8", // soft borders

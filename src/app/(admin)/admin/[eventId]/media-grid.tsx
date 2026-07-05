@@ -470,7 +470,7 @@ function MediaTile({
 
       {isActive ? (
         <div
-          className="fixed inset-0 z-50 bg-ink-900/70 flex items-center justify-center p-5 animate-[fadein_200ms_ease-out]"
+          className="fixed inset-0 z-50 bg-ink-900/85 flex items-center justify-center p-5 animate-[fadein_200ms_ease-out]"
           onClick={onClose}
         >
           <div

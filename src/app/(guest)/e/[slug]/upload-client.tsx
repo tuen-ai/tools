@@ -759,7 +759,6 @@ function StatusBadge({ status }: { status: UploadItem["status"] }) {
   );
 }
 
-// Candy confetti — strawberry, peach, butter, mint, lavender, sky.
 // Vintage confetti — burgundy, mustard, teal, terracotta, plum, parchment.
 const CONFETTI_COLORS = [
   "#7C3030", "#C98A8A", "#D9A441",

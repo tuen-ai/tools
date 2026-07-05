@@ -18,7 +18,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
   return (
     <form
       action={formAction}
-      className="bg-white rounded-3xl shadow-soft p-7 space-y-4"
+      className="frame-vintage shadow-soft p-7 space-y-4"
     >
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">{t.loginEmail}</span>
