@@ -92,6 +92,8 @@ export function UploadClient({
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [messageMode, setMessageMode] = useState<"text" | "voice">("text");
+  const [sentTexts, setSentTexts] = useState<{ id: string; body: string }[]>([]);
+  const [sendingText, setSendingText] = useState(false);
   // Selected photo-challenge (applies to the whole batch; tap to toggle).
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [voiceClips, setVoiceClips] = useState<VoiceClip[]>([]);
@@ -125,27 +127,44 @@ export function UploadClient({
   const refreshMyUploads = useCallback(
     async (fp: string) => {
       if (!fp) return;
-      try {
-        const res = await fetch("/api/media/mine", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventSlug, clientFingerprint: fp }),
-        });
-        if (!res.ok) return; // reassurance strip is best-effort only
-        setMyUploads(
-          (await res.json()) as NonNullable<typeof myUploads>,
-        );
-      } catch {
-        // Network blip — the strip just doesn't show.
+      // Retry a couple of times on a transient failure — venue Wi-Fi drops
+      // one request and the "you've shared N" strip would otherwise stay
+      // blank on a returning guest even though their uploads exist.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch("/api/media/mine", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventSlug, clientFingerprint: fp }),
+          });
+          if (res.ok) {
+            setMyUploads((await res.json()) as NonNullable<typeof myUploads>);
+            return;
+          }
+          if (res.status !== 429 && res.status < 500) return; // won't fix on retry
+        } catch {
+          // network blip — fall through to retry
+        }
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       }
     },
     [eventSlug],
   );
 
-  // Returning guests see their earlier uploads as soon as the
-  // fingerprint hydrates.
+  // Returning guests see their earlier uploads as soon as the fingerprint
+  // hydrates, and again whenever they come back to the tab.
   useEffect(() => {
     if (fingerprint) void refreshMyUploads(fingerprint);
+  }, [fingerprint, refreshMyUploads]);
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible" && fingerprint) {
+        void refreshMyUploads(fingerprint);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [fingerprint, refreshMyUploads]);
 
   useEffect(() => {
@@ -189,6 +208,38 @@ export function UploadClient({
       setBatchError(lookupUploadError(t, (err as Error).message));
     } finally {
       setDeletingClipId(null);
+    }
+  }
+
+  // Text messages send standalone (like voice) — a guest can leave a
+  // well-wish without also uploading photos, and see it echoed back.
+  async function sendTextMessage() {
+    const body = message.trim();
+    if (!body || sendingText || !fingerprint) return;
+    setSendingText(true);
+    setBatchError(null);
+    try {
+      const res = await fetch("/api/messages/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventSlug,
+          clientFingerprint: fingerprint,
+          displayName: name || null,
+          body,
+        }),
+      });
+      if (!res.ok) {
+        const b = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(b.error ?? `send_failed_${res.status}`);
+      }
+      const { id } = (await res.json()) as { id: string };
+      setSentTexts((prev) => [...prev, { id, body }]);
+      setMessage("");
+    } catch (err) {
+      setBatchError(lookupUploadError(t, (err as Error).message));
+    } finally {
+      setSendingText(false);
     }
   }
 
@@ -302,15 +353,14 @@ export function UploadClient({
         eventSlug,
         clientFingerprint: fingerprint,
         displayName: name || null,
-        message: message || null,
+        // Text notes now send standalone (see sendTextMessage), so they no
+        // longer ride with the photo batch — decoupled from voice-parity.
+        message: null,
         tableLabel: tableLabel ?? null,
         challengeId,
         items: list,
         onItemChange: patchItem,
       });
-      // Clear the message after a successful send so a second batch
-      // doesn't accidentally re-post it.
-      setMessage("");
       // Refresh the reassurance strip so the new photos show up in it.
       void refreshMyUploads(fingerprint);
     } catch (err) {
@@ -461,15 +511,45 @@ export function UploadClient({
         </div>
 
         {messageMode === "text" ? (
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={t.messagePlaceholder}
-            maxLength={500}
-            rows={2}
-            disabled={isUploading}
-            className="w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition resize-none"
-          />
+          <div className="space-y-3">
+            {sentTexts.length > 0 ? (
+              <div>
+                <p className="text-xs font-medium text-sage-700 mb-2">
+                  {t.sentMessagesHeading(sentTexts.length)}
+                </p>
+                <ul className="space-y-2">
+                  {sentTexts.map((m) => (
+                    <li
+                      key={m.id}
+                      className="rounded-xl border border-cream-200 bg-cream-50 px-3 py-2 text-sm text-ink-900 whitespace-pre-wrap break-words"
+                    >
+                      {m.body}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={t.messagePlaceholder}
+              maxLength={500}
+              rows={2}
+              disabled={sendingText}
+              className="w-full rounded-xl border border-cream-200 bg-cream-50 px-4 py-3 text-base outline-none focus:border-blush-500 focus:bg-white transition resize-none"
+            />
+            {message.trim() ? (
+              <button
+                type="button"
+                onClick={sendTextMessage}
+                disabled={sendingText}
+                className="w-full btn-candy px-4 py-3 text-sm"
+                style={primaryButtonStyle}
+              >
+                {sendingText ? t.textSending : t.textSend}
+              </button>
+            ) : null}
+          </div>
         ) : (
           <div className="space-y-3">
             {voiceClips.length > 0 ? (

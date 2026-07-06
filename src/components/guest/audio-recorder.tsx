@@ -209,7 +209,7 @@ export function AudioRecorder({
           err instanceof HttpError ? isRetryableStatus(err.status) : true,
       );
 
-      await withRetry(
+      const finalizeRes = await withRetry(
         async () => {
           const res = await fetch("/api/messages/audio/finalize", {
             method: "POST",
@@ -226,18 +226,23 @@ export function AudioRecorder({
             const body = await res.json().catch(() => ({}));
             throw new HttpError(res.status, body.error ?? `finalize_failed_${res.status}`);
           }
+          return (await res.json()) as { id: string; playbackUrl: string | null };
         },
         (err) =>
           err instanceof HttpError ? isRetryableStatus(err.status) : true,
       );
 
       setPhase("done");
-      // Hand the local blob URL to the parent so the guest can re-listen
-      // to the sent clip as a tile. Parent now owns the URL — DO NOT
-      // revoke here (resetAfterSend just clears local state).
+      // Play the sent clip from the signed SERVER url (proper file, seekable,
+      // cross-browser). Fall back to the local blob only if signing failed.
+      // The local blob is no longer needed for the tile — revoke it.
+      const playbackUrl = finalizeRes?.playbackUrl ?? previewUrl!;
+      if (finalizeRes?.playbackUrl && previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
       onSent({
         messageId: sign.messageId,
-        audioUrl: previewUrl!,
+        audioUrl: playbackUrl,
         durationSec: elapsed,
       });
       resetAfterSend();

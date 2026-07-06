@@ -94,7 +94,15 @@ export async function POST(request: Request) {
       body: parsed.body ?? null,
       audioPath: parsed.storagePath,
     });
-    return NextResponse.json({ id });
+    // Return a signed playback URL of the finalized object. The client uses
+    // THIS (a proper file with a Content-Type + seekable range support) for
+    // the sent-clip player instead of the raw MediaRecorder blob, whose
+    // missing-duration metadata makes the native <audio> control show an
+    // error in several browsers (and which iOS Safari can't play if webm).
+    const { data: signed } = await admin.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(parsed.storagePath, 2 * 60 * 60);
+    return NextResponse.json({ id, playbackUrl: signed?.signedUrl ?? null });
   } catch (err) {
     console.error("audio finalize insert failed", (err as Error).message);
     return NextResponse.json({ error: "insert_failed" }, { status: 500 });
