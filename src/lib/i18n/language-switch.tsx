@@ -21,6 +21,13 @@ interface Props {
   basePath?: string;
   /** Tone variant. "dark" for use over dark backgrounds (slideshow). */
   tone?: "default" | "muted" | "dark";
+  /**
+   * Client-instant mode: when provided, switching updates the caller's own
+   * state (no navigation / server round-trip) — the cookie is still written
+   * and the URL updated in place so a shared/refreshed link keeps the
+   * choice. Used on the guest page where the whole UI is client-rendered.
+   */
+  onSelect?: (code: Lang) => void;
 }
 
 /** Writes the language preference cookie, then navigates to ?lang=<code>. */
@@ -28,7 +35,12 @@ function setLangCookie(code: Lang) {
   document.cookie = `${LANG_COOKIE}=${code}; path=/; max-age=${LANG_COOKIE_MAX_AGE}; samesite=lax`;
 }
 
-export function LanguageSwitch({ current, basePath, tone = "default" }: Props) {
+export function LanguageSwitch({
+  current,
+  basePath,
+  tone = "default",
+  onSelect,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -37,6 +49,20 @@ export function LanguageSwitch({ current, basePath, tone = "default" }: Props) {
   function pick(code: Lang) {
     if (code === current || pending) return;
     setLangCookie(code);
+
+    // Client-instant mode: flip local state + update the URL in place (no
+    // navigation), so the switch is immediate.
+    if (onSelect) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("lang", code);
+      window.history.replaceState(
+        null,
+        "",
+        `${basePath ?? pathname ?? "/"}?${params.toString()}`,
+      );
+      onSelect(code);
+      return;
+    }
 
     const target = basePath ?? pathname ?? "/";
     const params = new URLSearchParams(searchParams.toString());

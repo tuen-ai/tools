@@ -42,6 +42,7 @@ export interface Dict {
   slideshowCounter: (current: number, total: number) => string;
   wallPhotoCount: (n: number) => string;
   slideshowNewToast: (n: number) => string;
+  tabPhoto: string;
   msgModeText: string;
   msgModeVoice: string;
   textSend: string;
@@ -125,6 +126,7 @@ export const DICT: Record<Lang, Dict> = {
     wallPhotoCount: (n) => `${n} photo${n === 1 ? "" : "s"}`,
     slideshowNewToast: (n) =>
       `${n} new photo${n === 1 ? "" : "s"}`,
+    tabPhoto: "Photos",
     msgModeText: "Text",
     msgModeVoice: "Voice",
     textSend: "Send message",
@@ -190,6 +192,7 @@ export const DICT: Record<Lang, Dict> = {
     slideshowCounter: (current, total) => `${current} / ${total}`,
     wallPhotoCount: (n) => `${n} 張相片`,
     slideshowNewToast: (n) => `${n} 張新相片`,
+    tabPhoto: "相片",
     msgModeText: "文字",
     msgModeVoice: "語音",
     textSend: "送出留言",
