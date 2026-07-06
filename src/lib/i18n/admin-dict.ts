@@ -61,6 +61,7 @@ export interface AdminDict {
   statGuests: string;
   statMessages: string;
   statTables: string;
+  statStorage: string;
 
   // ── Media grid ─────────────────────────────────────────────────
   filterAll: string;
@@ -248,6 +249,7 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     statGuests: "賓客",
     statMessages: "留言",
     statTables: "座位",
+    statStorage: "已用空間",
 
     filterAll: "全部",
     loadingMore: "載入中…",
@@ -445,6 +447,7 @@ export const ADMIN_DICT: Record<Lang, AdminDict> = {
     statGuests: "Guests",
     statMessages: "Messages",
     statTables: "Tables",
+    statStorage: "Storage",
 
     filterAll: "All",
     loadingMore: "Loading…",

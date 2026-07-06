@@ -15,9 +15,10 @@ type Phase = "idle" | "recording" | "preview" | "sending" | "done" | "error";
 
 export interface VoiceClip {
   messageId: string;
-  /** Local blob URL — the parent owns the lifecycle and revokes when done. */
+  /** Signed server URL (or local blob for a just-recorded clip). */
   audioUrl: string;
-  durationSec: number;
+  /** Seconds — null for clips reloaded from the server (not stored in DB). */
+  durationSec: number | null;
 }
 
 interface Props {

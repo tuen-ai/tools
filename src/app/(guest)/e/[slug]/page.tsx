@@ -7,10 +7,8 @@ import { listChallenges } from "@/lib/db/challenges";
 import { signOriginalUrl } from "@/lib/db/media";
 import { DICT } from "@/lib/i18n";
 import { resolveLangServer } from "@/lib/i18n/server";
-import { LanguageSwitch } from "@/lib/i18n/language-switch";
 import { GuestScatter } from "@/components/guest/scatter";
-import { UploadClient } from "./upload-client";
-import { ClosedScreen } from "./closed";
+import { GuestExperience } from "./guest-experience";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -62,7 +60,6 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
   if (!event) notFound();
 
   const lang = await resolveLangServer(sp.lang);
-  const t = DICT[lang];
   const primaryColor = readPrimaryColor(event.theme);
   const tableLabel = sp.table?.trim() || null;
 
@@ -93,67 +90,18 @@ export default async function GuestEventPage({ params, searchParams }: Props) {
   return (
     <main className="relative min-h-dvh flex flex-col items-center px-5 py-8 sm:py-12 overflow-hidden">
       <GuestScatter />
-      <div className="relative z-10 w-full max-w-md animate-[fadeup_500ms_ease-out]">
-        {/* Language switch up top where it's easy to find — a guest whose
-            phone reports the wrong Accept-Language shouldn't have to scroll
-            past the whole form to change it. */}
-        <div className="flex justify-end mb-3">
-          <LanguageSwitch current={lang} basePath={`/e/${event.slug}`} />
-        </div>
-
-        {coverUrl ? (
-          <div className="mb-6 overflow-hidden rounded-3xl shadow-soft animate-[fadeup_700ms_ease-out]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={coverUrl}
-              alt=""
-              className="w-full h-56 object-cover"
-            />
-          </div>
-        ) : null}
-
-        <header className="text-center mb-8">
-          {tableLabel ? (
-            <p
-              className={`inline-block text-[11px] font-semibold tracking-widest px-3 py-1.5 rounded-md mb-3 rotate-2 border-2 border-dashed ${
-                primaryColor ? "text-white border-white/50" : "text-blush-700 border-blush-700"
-              }`}
-              style={primaryColor ? { backgroundColor: primaryColor } : undefined}
-            >
-              {t.tableBadge(tableLabel)}
-            </p>
-          ) : null}
-          <p
-            className={`uppercase tracking-[0.3em] text-xs font-semibold mb-3 ${
-              primaryColor ? "" : "text-sage-700"
-            }`}
-            style={primaryColor ? { color: primaryColor } : undefined}
-          >
-            {t.eyebrow}
-          </p>
-          <h1 className="font-serif text-3xl sm:text-4xl text-ink-900 leading-tight">
-            {event.couple_names}
-          </h1>
-          {event.welcome_message ? (
-            <p className="mt-4 text-ink-700 text-[15px] leading-relaxed">
-              {event.welcome_message}
-            </p>
-          ) : null}
-        </header>
-
-        {event.upload_enabled ? (
-          <UploadClient
-            lang={lang}
-            eventSlug={event.slug}
-            maxPerGuest={event.max_uploads_per_guest}
-            primaryColor={primaryColor}
-            tableLabel={tableLabel}
-            challenges={challenges}
-          />
-        ) : (
-          <ClosedScreen lang={lang} />
-        )}
-      </div>
+      <GuestExperience
+        initialLang={lang}
+        eventSlug={event.slug}
+        coupleNames={event.couple_names}
+        welcomeMessage={event.welcome_message}
+        coverUrl={coverUrl}
+        primaryColor={primaryColor}
+        tableLabel={tableLabel}
+        maxPerGuest={event.max_uploads_per_guest}
+        uploadEnabled={event.upload_enabled}
+        challenges={challenges}
+      />
     </main>
   );
 }

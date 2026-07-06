@@ -91,7 +91,9 @@ export function UploadClient({
   const [fingerprint, setFingerprint] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
-  const [messageMode, setMessageMode] = useState<"text" | "voice">("text");
+  const [activeTab, setActiveTab] = useState<"photo" | "text" | "voice">(
+    "photo",
+  );
   const [sentTexts, setSentTexts] = useState<{ id: string; body: string }[]>([]);
   const [sendingText, setSendingText] = useState(false);
   // Selected photo-challenge (applies to the whole batch; tap to toggle).
@@ -151,11 +153,47 @@ export function UploadClient({
     [eventSlug],
   );
 
-  // Returning guests see their earlier uploads as soon as the fingerprint
-  // hydrates, and again whenever they come back to the tab.
+  // Reload the guest's own text + voice messages so they persist across
+  // page loads (keyed on the device fingerprint), same as the photo strip.
+  const refreshMyMessages = useCallback(
+    async (fp: string) => {
+      if (!fp) return;
+      try {
+        const res = await fetch("/api/messages/mine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventSlug, clientFingerprint: fp }),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          texts: { id: string; body: string }[];
+          voice: { id: string; url: string | null }[];
+        };
+        setSentTexts(data.texts);
+        setVoiceClips(
+          data.voice
+            .filter((v) => v.url)
+            .map((v) => ({
+              messageId: v.id,
+              audioUrl: v.url as string,
+              durationSec: null,
+            })),
+        );
+      } catch {
+        // best-effort
+      }
+    },
+    [eventSlug],
+  );
+
+  // Returning guests see their earlier uploads + messages as soon as the
+  // fingerprint hydrates, and again whenever they come back to the tab.
   useEffect(() => {
-    if (fingerprint) void refreshMyUploads(fingerprint);
-  }, [fingerprint, refreshMyUploads]);
+    if (fingerprint) {
+      void refreshMyUploads(fingerprint);
+      void refreshMyMessages(fingerprint);
+    }
+  }, [fingerprint, refreshMyUploads, refreshMyMessages]);
 
   useEffect(() => {
     function onVisible() {
@@ -182,28 +220,43 @@ export function UploadClient({
     };
   }, []);
 
+  // Shared guest-message delete (text or voice), authenticated by
+  // (eventSlug, fingerprint).
+  async function deleteGuestMessage(id: string): Promise<boolean> {
+    const res = await fetch(`/api/messages/${encodeURIComponent(id)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventSlug, clientFingerprint: fingerprint }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error ?? `delete_failed_${res.status}`);
+    }
+    return true;
+  }
+
   async function deleteVoiceClip(clip: VoiceClip) {
     if (deletingClipId) return;
     if (!window.confirm(t.voiceClipDeleteConfirm)) return;
     setDeletingClipId(clip.messageId);
     try {
-      const res = await fetch(
-        `/api/messages/audio/${encodeURIComponent(clip.messageId)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            eventSlug,
-            clientFingerprint: fingerprint,
-          }),
-        },
-      );
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `delete_failed_${res.status}`);
-      }
+      await deleteGuestMessage(clip.messageId);
       URL.revokeObjectURL(clip.audioUrl);
       setVoiceClips((prev) => prev.filter((c) => c.messageId !== clip.messageId));
+    } catch (err) {
+      setBatchError(lookupUploadError(t, (err as Error).message));
+    } finally {
+      setDeletingClipId(null);
+    }
+  }
+
+  async function deleteTextMessage(id: string) {
+    if (deletingClipId) return;
+    if (!window.confirm(t.myUploadDeleteConfirm)) return;
+    setDeletingClipId(id);
+    try {
+      await deleteGuestMessage(id);
+      setSentTexts((prev) => prev.filter((m) => m.id !== id));
     } catch (err) {
       setBatchError(lookupUploadError(t, (err as Error).message));
     } finally {
@@ -410,54 +463,14 @@ export function UploadClient({
     );
   }
 
+  const tabs = [
+    { key: "photo" as const, label: t.tabPhoto, Icon: CameraIcon },
+    { key: "text" as const, label: t.msgModeText, Icon: PencilIcon },
+    { key: "voice" as const, label: t.msgModeVoice, Icon: MicIcon },
+  ];
+
   return (
     <div className="frame-vintage shadow-soft p-6 sm:p-8 space-y-5">
-      {myUploads && myUploads.count > 0 ? (
-        <div className="rounded-xl bg-sage-500/10 p-3">
-          <p className="text-xs font-medium text-sage-700 mb-2">
-            {t.myUploadsHeading(myUploads.count)}
-          </p>
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-            {myUploads.items.map((m) => (
-              <div key={m.id} className="relative shrink-0">
-                {m.kind === "image" && m.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.url}
-                    alt=""
-                    loading="lazy"
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
-                ) : (
-                  <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-ink-900/80 text-white">
-                    <PlayIcon className="h-4 w-4" />
-                  </span>
-                )}
-                {/* Tap-to-retract an accidental upload. */}
-                <button
-                  type="button"
-                  onClick={() => deleteMyUpload(m.id)}
-                  aria-label={t.removeFile}
-                  className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink-900 text-white shadow"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2.4}
-                    strokeLinecap="round"
-                    className="h-3 w-3"
-                    aria-hidden="true"
-                  >
-                    <path d="M6 6l12 12M18 6L6 18" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <label className="block">
         <span className="text-sm text-ink-700 font-medium">
           {t.yourName}{" "}
@@ -473,45 +486,210 @@ export function UploadClient({
         />
       </label>
 
+      {/* Photo / Text / Voice tabs. */}
       <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm text-ink-700 font-medium">
-            {t.messageLabel}{" "}
-            <span className="text-ink-700 font-normal">{t.optional}</span>
-          </span>
-          <div
-            className="inline-flex rounded-lg bg-cream-100 p-0.5 text-xs"
-            role="tablist"
-          >
+        <div
+          className="grid grid-cols-3 rounded-lg bg-cream-100 p-0.5 text-xs"
+          role="tablist"
+        >
+          {tabs.map(({ key, label, Icon }) => (
             <button
+              key={key}
               type="button"
-              onClick={() => setMessageMode("text")}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md transition ${
-                messageMode === "text" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
-              }`}
+              onClick={() => setActiveTab(key)}
               role="tab"
-              aria-selected={messageMode === "text"}
-            >
-              <PencilIcon className="h-3.5 w-3.5" />
-              {t.msgModeText}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMessageMode("voice")}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md transition ${
-                messageMode === "voice" ? "bg-white shadow-sm text-ink-900" : "text-ink-700"
+              aria-selected={activeTab === key}
+              className={`inline-flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-md transition ${
+                activeTab === key
+                  ? "bg-white shadow-sm text-ink-900 font-medium"
+                  : "text-ink-700"
               }`}
-              role="tab"
-              aria-selected={messageMode === "voice"}
             >
-              <MicIcon className="h-3.5 w-3.5" />
-              {t.msgModeVoice}
+              <Icon className="h-4 w-4" />
+              {label}
             </button>
-          </div>
+          ))}
         </div>
 
-        {messageMode === "text" ? (
-          <div className="space-y-3">
+        {/* ── Photo / Video tab ─────────────────────────────────── */}
+        {activeTab === "photo" ? (
+          <div className="space-y-4 mt-4">
+            {myUploads && myUploads.count > 0 ? (
+              <div className="rounded-xl bg-sage-500/10 p-3">
+                <p className="text-xs font-medium text-sage-700 mb-2">
+                  {t.myUploadsHeading(myUploads.count)}
+                </p>
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                  {myUploads.items.map((m) => (
+                    <div key={m.id} className="relative shrink-0">
+                      {m.kind === "image" && m.url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={m.url}
+                          alt=""
+                          loading="lazy"
+                          className="h-14 w-14 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-ink-900/80 text-white">
+                          <PlayIcon className="h-4 w-4" />
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => deleteMyUpload(m.id)}
+                        aria-label={t.removeFile}
+                        className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink-900 text-white shadow"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2.4}
+                          strokeLinecap="round"
+                          className="h-3 w-3"
+                          aria-hidden="true"
+                        >
+                          <path d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {challenges.length > 0 ? (
+              <div>
+                <span className="text-sm text-ink-700 font-medium">
+                  {t.challengesLabel}{" "}
+                  <span className="text-ink-700 font-normal">{t.optional}</span>
+                </span>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {challenges.map((c) => {
+                    const active = challengeId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        disabled={isUploading}
+                        aria-pressed={active}
+                        onClick={() =>
+                          setChallengeId((cur) => (cur === c.id ? null : c.id))
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-2.5 text-sm transition ${
+                          active
+                            ? "border-blush-400 bg-blush-500/15 text-blush-700 font-medium"
+                            : "border-cream-200 bg-cream-50 text-ink-700 hover:border-blush-400"
+                        }`}
+                      >
+                        <StarFilledIcon
+                          className={`h-3 w-3 ${active ? "" : "opacity-40"}`}
+                        />
+                        {c.prompt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              // No image/heic|heif here: iOS Safari then transcodes HEIC →
+              // JPEG on selection. No `capture`: it forces the camera on
+              // Android and hides the photo library. Server allowlist still
+              // accepts HEIC for Android file managers.
+              accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+              multiple
+              onChange={handleFileSelect}
+              disabled={isUploading}
+              className="hidden"
+              id="wgp-file-input"
+            />
+
+            {items.length === 0 ? (
+              <label
+                htmlFor="wgp-file-input"
+                className="block cursor-pointer rounded-lg border-2 border-dashed border-sage-600 bg-sage-500/10 px-6 py-10 text-center transition hover:bg-sage-500/15"
+              >
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white text-sage-700 shadow-soft animate-[bob_2.6s_ease-in-out_infinite]">
+                  <CameraIcon className="h-7 w-7" />
+                </div>
+                <div className="font-serif text-lg text-ink-900">
+                  {t.choosePhotos}
+                </div>
+                <div className="text-xs text-ink-700 mt-1">
+                  {t.chooseHelp(MAX_FILES_PER_REQUEST)}
+                </div>
+              </label>
+            ) : (
+              <>
+                <FileList
+                  items={items}
+                  lang={lang}
+                  canRemove={!isUploading}
+                  onRemove={removeItem}
+                />
+                {!isUploading && items.length < MAX_FILES_PER_REQUEST ? (
+                  <label
+                    htmlFor="wgp-file-input"
+                    onClick={() => {
+                      appendModeRef.current = true;
+                    }}
+                    className="flex items-center justify-center gap-2 cursor-pointer rounded-xl border border-dashed border-blush-400 bg-blush-400/5 px-4 py-2.5 text-sm font-medium text-blush-700 hover:bg-blush-400/10 transition"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    {t.addMorePhotos}
+                  </label>
+                ) : null}
+                <div className="flex gap-2">
+                  {!isUploading ? (
+                    <label
+                      htmlFor="wgp-file-input"
+                      onClick={() => {
+                        appendModeRef.current = false;
+                      }}
+                      className="flex-1 cursor-pointer btn-soft px-4 py-3 text-center text-sm"
+                    >
+                      {t.changePhotos}
+                    </label>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={isUploading}
+                    className={primaryButtonClass}
+                    style={primaryButtonStyle}
+                  >
+                    {isUploading
+                      ? t.sending(doneCount, items.length)
+                      : t.send(items.length)}
+                  </button>
+                </div>
+                {isUploading ? (
+                  <p className="text-xs text-ink-700 text-center">
+                    {t.uploadingKeepOpen}
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
+        ) : activeTab === "text" ? (
+          /* ── Text tab ────────────────────────────────────────── */
+          <div className="space-y-3 mt-4">
             {sentTexts.length > 0 ? (
               <div>
                 <p className="text-xs font-medium text-sage-700 mb-2">
@@ -521,9 +699,22 @@ export function UploadClient({
                   {sentTexts.map((m) => (
                     <li
                       key={m.id}
-                      className="rounded-xl border border-cream-200 bg-cream-50 px-3 py-2 text-sm text-ink-900 whitespace-pre-wrap break-words"
+                      className="rounded-xl border border-cream-200 bg-cream-50 px-3 py-2"
                     >
-                      {m.body}
+                      <p className="text-sm text-ink-900 whitespace-pre-wrap break-words">
+                        {m.body}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => deleteTextMessage(m.id)}
+                        disabled={deletingClipId === m.id}
+                        className="mt-1 inline-flex items-center gap-1 py-1 text-xs text-blush-700 hover:text-blush-700/80 disabled:opacity-60"
+                      >
+                        <TrashIcon className="h-3.5 w-3.5" />
+                        {deletingClipId === m.id
+                          ? t.voiceClipDeleting
+                          : t.removeFile}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -551,7 +742,8 @@ export function UploadClient({
             ) : null}
           </div>
         ) : (
-          <div className="space-y-3">
+          /* ── Voice tab ───────────────────────────────────────── */
+          <div className="space-y-3 mt-4">
             {voiceClips.length > 0 ? (
               <div>
                 <p className="text-xs font-medium text-sage-700 mb-2">
@@ -564,7 +756,11 @@ export function UploadClient({
                       className="rounded-xl border border-cream-200 bg-cream-50 p-3"
                     >
                       <div className="flex items-center justify-between mb-2 text-xs text-ink-700">
-                        <span>{t.voiceClipDuration(clip.durationSec)}</span>
+                        <span>
+                          {clip.durationSec != null
+                            ? t.voiceClipDuration(clip.durationSec)
+                            : t.msgModeVoice}
+                        </span>
                         <button
                           type="button"
                           onClick={() => deleteVoiceClip(clip)}
@@ -600,140 +796,6 @@ export function UploadClient({
           </div>
         )}
       </div>
-
-      {challenges.length > 0 ? (
-        <div>
-          <span className="text-sm text-ink-700 font-medium">
-            {t.challengesLabel}{" "}
-            <span className="text-ink-700 font-normal">{t.optional}</span>
-          </span>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {challenges.map((c) => {
-              const active = challengeId === c.id;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  disabled={isUploading}
-                  aria-pressed={active}
-                  onClick={() =>
-                    setChallengeId((cur) => (cur === c.id ? null : c.id))
-                  }
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-2.5 text-sm transition ${
-                    active
-                      ? "border-blush-400 bg-blush-500/15 text-blush-700 font-medium"
-                      : "border-cream-200 bg-cream-50 text-ink-700 hover:border-blush-400"
-                  }`}
-                >
-                  <StarFilledIcon
-                    className={`h-3 w-3 ${active ? "" : "opacity-40"}`}
-                  />
-                  {c.prompt}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        // Deliberately NOT advertising image/heic|heif here: when HEIC is
-        // absent from `accept`, iOS Safari transcodes HEIC → high-quality
-        // JPEG on selection (print quality preserved), which sidesteps raw
-        // HEIC upload/thumbnailing bugs. Worse, Safari 17+ converts even
-        // PNGs *to* HEIC when image/heic is listed. The server allowlist
-        // still accepts HEIC as a fallback for Android file managers.
-        accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
-        multiple
-        // NO `capture` attribute: on Android Chrome it forces the camera and
-        // hides the photo library, so guests can't upload the photos they
-        // already took — the app's core flow. The OS picker offers "Take
-        // photo" on its own anyway.
-        onChange={handleFileSelect}
-        disabled={isUploading}
-        className="hidden"
-        id="wgp-file-input"
-      />
-
-      {items.length === 0 ? (
-        <label
-          htmlFor="wgp-file-input"
-          className="block cursor-pointer rounded-lg border-2 border-dashed border-sage-600 bg-sage-500/10 px-6 py-10 text-center transition hover:bg-sage-500/15"
-        >
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white text-sage-700 shadow-soft animate-[bob_2.6s_ease-in-out_infinite]">
-            <CameraIcon className="h-7 w-7" />
-          </div>
-          <div className="font-serif text-lg text-ink-900">
-            {t.choosePhotos}
-          </div>
-          <div className="text-xs text-ink-700 mt-1">
-            {t.chooseHelp(MAX_FILES_PER_REQUEST)}
-          </div>
-        </label>
-      ) : (
-        <>
-          <FileList
-            items={items}
-            lang={lang}
-            canRemove={!isUploading}
-            onRemove={removeItem}
-          />
-          {!isUploading && items.length < MAX_FILES_PER_REQUEST ? (
-            <label
-              htmlFor="wgp-file-input"
-              onClick={() => {
-                appendModeRef.current = true;
-              }}
-              className="flex items-center justify-center gap-2 cursor-pointer rounded-xl border border-dashed border-blush-400 bg-blush-400/5 px-4 py-2.5 text-sm font-medium text-blush-700 hover:bg-blush-400/10 transition"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
-                aria-hidden="true"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              {t.addMorePhotos}
-            </label>
-          ) : null}
-          <div className="flex gap-2">
-            {!isUploading ? (
-              <label
-                htmlFor="wgp-file-input"
-                onClick={() => {
-                  appendModeRef.current = false;
-                }}
-                className="flex-1 cursor-pointer btn-soft px-4 py-3 text-center text-sm"
-              >
-                {t.changePhotos}
-              </label>
-            ) : null}
-            <button
-              type="button"
-              onClick={handleUpload}
-              disabled={isUploading}
-              className={primaryButtonClass}
-              style={primaryButtonStyle}
-            >
-              {isUploading
-                ? t.sending(doneCount, items.length)
-                : t.send(items.length)}
-            </button>
-          </div>
-          {isUploading ? (
-            <p className="text-xs text-ink-700 text-center">
-              {t.uploadingKeepOpen}
-            </p>
-          ) : null}
-        </>
-      )}
 
       {batchError ? (
         <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700">

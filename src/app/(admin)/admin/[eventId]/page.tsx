@@ -19,7 +19,16 @@ import {
   EnvelopeIcon,
   TableIcon,
   PlayIcon,
+  DatabaseIcon,
 } from "@/components/ui/icons";
+
+/** Human byte size — B / KB / MB / GB, one decimal from MB up. */
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
 import { MediaGrid } from "./media-grid";
 import { MessagesPanel } from "./messages-panel";
 
@@ -60,7 +69,7 @@ export default async function EventDashboardPage({ params }: Props) {
 
   const statItems: {
     label: string;
-    value: number;
+    value: string | number;
     Icon: StatIcon;
     tint: string;
   }[] = [
@@ -68,6 +77,7 @@ export default async function EventDashboardPage({ params }: Props) {
     { label: t.statGuests, value: stats.guests, Icon: GlassIcon, tint: "bg-peach-soft text-peach-deep" },
     { label: t.statMessages, value: stats.messages, Icon: EnvelopeIcon, tint: "bg-sage-500/25 text-sage-700" },
     { label: t.statTables, value: tables.length, Icon: TableIcon, tint: "bg-lav-soft text-lav-deep" },
+    { label: t.statStorage, value: formatBytes(stats.storageBytes), Icon: DatabaseIcon, tint: "bg-sky-soft text-sky-deep" },
   ];
 
   return (
@@ -140,7 +150,7 @@ export default async function EventDashboardPage({ params }: Props) {
         </nav>
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {statItems.map(({ label, value, Icon, tint }) => (
           <div
             key={label}

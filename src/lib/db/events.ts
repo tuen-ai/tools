@@ -70,14 +70,17 @@ export async function updateEvent(
 export interface EventStats {
   guests: number;
   messages: number;
+  /** Total bytes of stored media (all statuses — deleted objects survive
+   *  until the 7-day cron purge, so they still occupy storage). */
+  storageBytes: number;
 }
 
-/** Head-only counts for the dashboard stats row. */
+/** Head-only counts + storage total for the dashboard stats row. */
 export async function getEventStats(
   client: SupabaseClient<Database>,
   eventId: string,
 ): Promise<EventStats> {
-  const [guests, messages] = await Promise.all([
+  const [guests, messages, sizes] = await Promise.all([
     client
       .from("guests")
       .select("id", { count: "exact", head: true })
@@ -86,8 +89,20 @@ export async function getEventStats(
       .from("messages")
       .select("id", { count: "exact", head: true })
       .eq("event_id", eventId),
+    // A wedding tops out at a few thousand rows; pulling the size column and
+    // summing in JS avoids needing a SUM() RPC / migration.
+    client.from("media").select("size_bytes").eq("event_id", eventId),
   ]);
   if (guests.error) throw guests.error;
   if (messages.error) throw messages.error;
-  return { guests: guests.count ?? 0, messages: messages.count ?? 0 };
+  if (sizes.error) throw sizes.error;
+  const storageBytes = (sizes.data ?? []).reduce(
+    (sum, r) => sum + (r.size_bytes ?? 0),
+    0,
+  );
+  return {
+    guests: guests.count ?? 0,
+    messages: messages.count ?? 0,
+    storageBytes,
+  };
 }
