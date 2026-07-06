@@ -42,9 +42,11 @@ export function LanguageSwitch({ current, basePath, tone = "default" }: Props) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("lang", code);
 
+    // push() to the new ?lang already re-renders the dynamic RSC with the
+    // new language — the extra router.refresh() was a second round-trip
+    // that made the switch feel slow. Cookie is set above for persistence.
     startTransition(() => {
       router.push(`${target}?${params.toString()}`);
-      router.refresh();
     });
   }
 

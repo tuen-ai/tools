@@ -44,6 +44,9 @@ export interface Dict {
   slideshowNewToast: (n: number) => string;
   msgModeText: string;
   msgModeVoice: string;
+  textSend: string;
+  textSending: string;
+  sentMessagesHeading: (n: number) => string;
   voiceSent: (n: number) => string;
   voiceClipHeading: (n: number) => string;
   voiceClipDuration: (sec: number) => string;
@@ -96,18 +99,18 @@ export const DICT: Record<Lang, Dict> = {
     fileMeta: (isVideo, mb) => `${isVideo ? "Video" : "Photo"} · ${mb} MB`,
     removeFile: "Remove",
     send: (count) =>
-      `Send ${count} photo${count === 1 ? "" : "s"}`,
+      `Send ${count} item${count === 1 ? "" : "s"}`,
     sending: (done, total) => `Sending… ${done}/${total}`,
     uploadingKeepOpen: "Uploading — please keep this page open.",
     retryFailed: (n) => `Retry ${n} that failed`,
     privacyNote: (perGuest) =>
       `Up to ${perGuest} photos per guest. Your photos are private to the couple.`,
     myUploadsHeading: (n) =>
-      `You've shared ${n} photo${n === 1 ? "" : "s"} — thank you!`,
+      `You've shared ${n} item${n === 1 ? "" : "s"} — thank you!`,
     myUploadDeleteConfirm: "Remove this photo from the couple's gallery?",
     thanksTitle: "Thank you!",
     thanksBody: (sent) =>
-      `${sent} photo${sent === 1 ? "" : "s"} sent to the couple.`,
+      `${sent} item${sent === 1 ? "" : "s"} sent to the couple.`,
     thanksFailed: (failed) =>
       ` ${failed} couldn’t be sent — please try those again.`,
     addMore: "Add more photos",
@@ -124,6 +127,9 @@ export const DICT: Record<Lang, Dict> = {
       `${n} new photo${n === 1 ? "" : "s"}`,
     msgModeText: "Text",
     msgModeVoice: "Voice",
+    textSend: "Send message",
+    textSending: "Sending…",
+    sentMessagesHeading: (n) => `Sent message${n === 1 ? "" : "s"} (${n})`,
     voiceSent: (n) => `${n} voice message${n === 1 ? "" : "s"} sent`,
     voiceClipHeading: (n) =>
       `Sent voice message${n === 1 ? "" : "s"} (${n})`,
@@ -142,7 +148,7 @@ export const DICT: Record<Lang, Dict> = {
     errUnsupported: (name) => `${name}: unsupported format`,
     errOverSize: (name) => `${name}: file too large`,
     errVideoTooLong: (name) => `${name}: video over 30 seconds`,
-    errTruncated: (max) => `Only the first ${max} photos were added.`,
+    errTruncated: (max) => `Only the first ${max} were added.`,
     errQuota: "You've reached the upload limit for this wedding — thank you!",
     errRateLimited: "Too many uploads at once — please wait a moment and retry.",
     errUploadsClosed: "The couple has closed photo uploads.",
@@ -162,16 +168,16 @@ export const DICT: Record<Lang, Dict> = {
     addMorePhotos: "新增相片",
     fileMeta: (isVideo, mb) => `${isVideo ? "短片" : "相片"} · ${mb} MB`,
     removeFile: "移除",
-    send: (count) => `傳送 ${count} 張相片`,
+    send: (count) => `傳送 ${count} 個`,
     sending: (done, total) => `傳送中… ${done}/${total}`,
     uploadingKeepOpen: "上傳緊 — 請唔好閂呢一頁。",
     retryFailed: (n) => `重試失敗嘅 ${n} 張`,
     privacyNote: (perGuest) =>
       `每位賓客最多 ${perGuest} 張。您的相片只有新人會看到。`,
-    myUploadsHeading: (n) => `您已分享 ${n} 張相片 — 多謝您!`,
+    myUploadsHeading: (n) => `您已分享 ${n} 個 — 多謝您!`,
     myUploadDeleteConfirm: "要從新人相簿移除呢張相?",
     thanksTitle: "謝謝您!",
-    thanksBody: (sent) => `已成功傳送 ${sent} 張相片給新人。`,
+    thanksBody: (sent) => `已成功傳送 ${sent} 個給新人。`,
     thanksFailed: (failed) => ` 還有 ${failed} 張未能傳送,請再試一次。`,
     addMore: "再加幾張",
     closedTitle: "相片分享已關閉",
@@ -186,6 +192,9 @@ export const DICT: Record<Lang, Dict> = {
     slideshowNewToast: (n) => `${n} 張新相片`,
     msgModeText: "文字",
     msgModeVoice: "語音",
+    textSend: "送出留言",
+    textSending: "送出中…",
+    sentMessagesHeading: (n) => `已送出嘅留言(${n})`,
     voiceSent: (n) => `已送出 ${n} 段語音留言`,
     voiceClipHeading: (n) => `已送出嘅語音(${n})`,
     voiceClipDuration: (sec) => `${sec} 秒`,
