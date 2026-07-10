@@ -26,6 +26,8 @@ export interface Dict {
   sending: (done: number, total: number) => string;
   uploadingKeepOpen: string;
   retryFailed: (n: number) => string;
+  offlinePending: (n: number) => string;
+  offlineDraining: (n: number) => string;
   privacyNote: (perGuest: number) => string;
   myUploadsHeading: (n: number) => string;
   myUploadDeleteConfirm: string;
@@ -104,6 +106,9 @@ export const DICT: Record<Lang, Dict> = {
     sending: (done, total) => `Sending… ${done}/${total}`,
     uploadingKeepOpen: "Uploading — please keep this page open.",
     retryFailed: (n) => `Retry ${n} that failed`,
+    offlinePending: (n) =>
+      `${n} saved on this device — they'll upload automatically when you're back online.`,
+    offlineDraining: (n) => `Back online — sending ${n} saved item${n === 1 ? "" : "s"}…`,
     privacyNote: (perGuest) =>
       `Up to ${perGuest} photos per guest. Your photos are private to the couple.`,
     myUploadsHeading: (n) =>
@@ -174,6 +179,8 @@ export const DICT: Record<Lang, Dict> = {
     sending: (done, total) => `傳送中… ${done}/${total}`,
     uploadingKeepOpen: "上傳緊 — 請唔好閂呢一頁。",
     retryFailed: (n) => `重試失敗嘅 ${n} 張`,
+    offlinePending: (n) => `${n} 個已保存喺呢部機 — 有網絡會自動補傳。`,
+    offlineDraining: (n) => `網絡恢復 — 補傳緊 ${n} 個…`,
     privacyNote: (perGuest) =>
       `每位賓客最多 ${perGuest} 張。您的相片只有新人會看到。`,
     myUploadsHeading: (n) => `您已分享 ${n} 個 — 多謝您!`,

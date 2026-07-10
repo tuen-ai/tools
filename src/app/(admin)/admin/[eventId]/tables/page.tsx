@@ -87,32 +87,34 @@ export default async function TablesPage({ params }: Props) {
           <p className="text-ink-500 text-sm">{t.tablesEmpty}</p>
         </div>
       ) : (
-        // Print: 2×N cut-out table cards per A4 — dashed borders double as
-        // cut lines; each card is self-contained (couple names + scan
-        // instruction) so it works standing alone on the table.
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 print:mt-0 print:grid-cols-2 print:gap-0">
+        // Print: ONE full A4 page per table — a self-contained stand for
+        // each枱 with the couple's names, a huge table label, a large QR
+        // and the scan instruction, framed with the vintage double rule.
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 print:block print:mt-0">
           {qrs.map(({ table, url, svg }) => (
             <div
               key={table.id}
-              className="bg-white rounded-2xl border border-cream-200 p-4 text-center break-inside-avoid print:rounded-none print:border-dashed print:border-ink-500 print:p-8"
+              className="bg-white rounded-2xl border border-cream-200 p-4 text-center print:break-after-page print:flex print:h-[257mm] print:flex-col print:items-center print:justify-center print:rounded-none print:border-2 print:border-blush-500 print:p-[14mm] print:[&_svg]:h-auto print:[&_svg]:w-[105mm]"
             >
-              <p className="font-serif text-sm text-ink-700 mb-1 print:text-base">
+              <p className="font-serif text-sm text-ink-700 mb-1 print:text-2xl print:mb-4">
                 {event.couple_names}
               </p>
-              <p className="uppercase tracking-[0.2em] text-[10px] text-blush-700 mb-1">
+              <p className="uppercase tracking-[0.2em] text-[10px] text-blush-700 mb-1 print:text-sm print:tracking-[0.4em] print:mb-2">
                 {t.tableLabel}
               </p>
-              <h2 className="font-serif text-2xl text-ink-900 mb-3 break-words print:text-3xl">
+              <h2 className="font-serif text-2xl text-ink-900 mb-3 break-words print:text-7xl print:mb-10">
                 {table.label}
               </h2>
               <div
-                className="mx-auto inline-block mb-3"
+                className="mx-auto inline-block mb-3 print:mb-8"
                 dangerouslySetInnerHTML={{ __html: svg }}
               />
-              <p className="text-[11px] text-ink-700 mb-1 hidden print:block">
+              <p className="text-[11px] text-ink-700 mb-1 hidden print:block print:text-lg print:mb-2">
                 {t.qrScanInstruction}
               </p>
-              <p className="font-mono text-[9px] text-ink-500 break-all">{url}</p>
+              <p className="font-mono text-[9px] text-ink-500 break-all print:text-[10px]">
+                {url}
+              </p>
               <div className="mt-3 print:hidden">
                 <DeleteTableButton
                   lang={lang}
@@ -125,6 +127,13 @@ export default async function TablesPage({ params }: Props) {
           ))}
         </div>
       )}
+
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 12mm; }
+          html, body { background: #FFFFFF !important; }
+        }
+      `}</style>
     </div>
   );
 }

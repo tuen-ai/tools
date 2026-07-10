@@ -14,6 +14,11 @@ import {
   uploadGuestPhotos,
   type UploadItem,
 } from "@/lib/upload/client-upload";
+import {
+  queueAdd,
+  queueList,
+  queueRemove,
+} from "@/lib/upload/offline-queue";
 import { DICT, lookupUploadError, type Lang } from "@/lib/i18n";
 import { AudioRecorder, type VoiceClip } from "@/components/guest/audio-recorder";
 import {
@@ -110,6 +115,10 @@ export function UploadClient({
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
+  // Offline queue: files persisted in IndexedDB awaiting network.
+  const [queuedCount, setQueuedCount] = useState(0);
+  const [draining, setDraining] = useState(false);
+  const drainingRef = useRef(false);
   // The guest's previously-sent uploads ("did it work?" reassurance strip).
   const [myUploads, setMyUploads] = useState<{
     count: number;
@@ -204,6 +213,73 @@ export function UploadClient({
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [fingerprint, refreshMyUploads]);
+
+  // Drain the offline queue: re-upload files saved in IndexedDB while the
+  // device was offline. Runs on mount (resume after a tab close), when the
+  // browser reports connectivity back, and when the tab becomes visible.
+  const drainQueue = useCallback(
+    async (fp: string) => {
+      if (drainingRef.current || !fp || !navigator.onLine) return;
+      drainingRef.current = true;
+      try {
+        const stored = await queueList(eventSlug);
+        setQueuedCount(stored.length);
+        if (!stored.length) return;
+        setDraining(true);
+        const qItems: UploadItem[] = stored.map((s) => ({
+          id: s.id,
+          file: new File([s.blob], s.name, { type: s.type }),
+          status: "pending",
+          progress: 0,
+        }));
+        await uploadGuestPhotos({
+          eventSlug,
+          clientFingerprint: fp,
+          displayName: null,
+          message: null,
+          tableLabel: stored[0]?.tableLabel ?? null,
+          challengeId: stored[0]?.challengeId ?? null,
+          items: qItems,
+          onItemChange: (id, patch) => {
+            if (patch.status === "done") {
+              void queueRemove(id);
+              setQueuedCount((q) => Math.max(0, q - 1));
+            }
+          },
+        });
+        const remaining = await queueList(eventSlug);
+        setQueuedCount(remaining.length);
+        if (remaining.length === 0) void refreshMyUploads(fp);
+      } catch {
+        // Still offline / sign failed — the queue stays put for next time.
+      } finally {
+        setDraining(false);
+        drainingRef.current = false;
+      }
+    },
+    [eventSlug, refreshMyUploads],
+  );
+
+  useEffect(() => {
+    if (fingerprint) void drainQueue(fingerprint);
+  }, [fingerprint, drainQueue]);
+
+  useEffect(() => {
+    function onOnline() {
+      if (fingerprint) void drainQueue(fingerprint);
+    }
+    function onVis() {
+      if (document.visibilityState === "visible" && fingerprint) {
+        void drainQueue(fingerprint);
+      }
+    }
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [fingerprint, drainQueue]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -394,6 +470,31 @@ export function UploadClient({
     setItems(merged);
   }
 
+  // Stash not-yet-uploaded items into the offline queue (IndexedDB) so
+  // they survive tab closes and auto-send when the network returns.
+  async function stashOffline(list: UploadItem[], failedIds: Set<string>) {
+    const toQueue = list.filter((i) => failedIds.has(i.id));
+    if (!toQueue.length) return;
+    const ok = await queueAdd(
+      toQueue.map((i) => ({
+        id: i.id,
+        eventSlug,
+        blob: i.file,
+        name: i.file.name,
+        type: i.file.type,
+        tableLabel: tableLabel ?? null,
+        challengeId,
+        addedAt: Date.now(),
+      })),
+    );
+    if (ok) {
+      setQueuedCount((q) => q + toQueue.length);
+      // Drop the queued items from the visible list — the banner owns them
+      // now, and a guest shouldn't see the same file in two places.
+      setItems((prev) => prev.filter((i) => !failedIds.has(i.id)));
+    }
+  }
+
   // Core upload driver, shared by first send and retry-failed. Takes the
   // list explicitly (retry mutates state first, which isn't visible to a
   // closure over `items`).
@@ -401,6 +502,9 @@ export function UploadClient({
     if (!list.length || !fingerprint) return;
     setIsUploading(true);
     setBatchError(null);
+    // Track final statuses locally — patchItem's setState isn't readable
+    // synchronously after the await.
+    const statusMap = new Map(list.map((i) => [i.id, i.status]));
     try {
       await uploadGuestPhotos({
         eventSlug,
@@ -412,12 +516,30 @@ export function UploadClient({
         tableLabel: tableLabel ?? null,
         challengeId,
         items: list,
-        onItemChange: patchItem,
+        onItemChange: (id, patch) => {
+          if (patch.status) statusMap.set(id, patch.status);
+          patchItem(id, patch);
+        },
       });
       // Refresh the reassurance strip so the new photos show up in it.
       void refreshMyUploads(fingerprint);
+      // Anything that failed while the device is offline goes to the queue
+      // for automatic resend. Online failures keep the manual retry flow
+      // (they're usually validation, which a retry won't fix silently).
+      if (!navigator.onLine) {
+        const failedIds = new Set(
+          [...statusMap].filter(([, s]) => s === "failed").map(([id]) => id),
+        );
+        await stashOffline(list, failedIds);
+      }
     } catch (err) {
-      setBatchError(lookupUploadError(t, (err as Error).message));
+      // Sign-step failure: nothing uploaded. If we're offline, save the
+      // whole batch for auto-resend instead of surfacing an error.
+      if (!navigator.onLine) {
+        await stashOffline(list, new Set(list.map((i) => i.id)));
+      } else {
+        setBatchError(lookupUploadError(t, (err as Error).message));
+      }
     } finally {
       setIsUploading(false);
     }
@@ -796,6 +918,14 @@ export function UploadClient({
           </div>
         )}
       </div>
+
+      {queuedCount > 0 ? (
+        <div className="rounded-xl bg-butter-soft px-4 py-3 text-sm text-butter-deep">
+          {draining
+            ? t.offlineDraining(queuedCount)
+            : t.offlinePending(queuedCount)}
+        </div>
+      ) : null}
 
       {batchError ? (
         <div className="rounded-xl bg-blush-400/15 px-4 py-3 text-sm text-blush-700">
